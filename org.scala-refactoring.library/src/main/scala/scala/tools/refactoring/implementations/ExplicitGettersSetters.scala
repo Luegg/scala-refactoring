@@ -29,50 +29,48 @@ abstract class ExplicitGettersSetters extends MultiStageRefactoring with Paramet
     }
 
     val createSetter = selectedValue.symbol.isMutable
+    val publicName = newTermName(selectedValue.name.toString.trim)
+    val privateName = newTermName("_" + publicName)
 
-    val publicName = selectedValue.name.toString.trim
-
-    val privateName = "_"+ publicName
-
-    val privateFieldMods = if(createSetter)
+    val privateFieldMods = if (createSetter)
       Modifiers(Flags.PARAMACCESSOR).
-        withPosition (Flags.PRIVATE, NoPosition).
-        withPosition (Tokens.VAR, NoPosition)
+        withPosition(Flags.PRIVATE, NoPosition).
+        withPosition(Tokens.VAR, NoPosition)
     else
       Modifiers(Flags.PARAMACCESSOR)
 
-    val privateField = selectedValue copy (mods = privateFieldMods, name = newTermName(privateName))
+    val privateField = selectedValue copy (mods = privateFieldMods, name = privateName)
 
-    val getter = DefDef(
-        mods = Modifiers(Flags.METHOD) withPosition (Flags.METHOD, NoPosition),
-        name = newTermName(publicName),
-        tparams = Nil,
-        vparamss = Nil,
-        tpt = EmptyTree,
-        rhs = Block(
-            Ident(privateName) :: Nil, EmptyTree))
+    implicit def blockify(t: Tree) = new {
+      def asBlock = Block(t :: Nil, EmptyTree)
+    }
 
-    val setter = DefDef(
-        mods = Modifiers(Flags.METHOD) withPosition (Flags.METHOD, NoPosition),
-        name = newTermName(publicName +"_="),
-        tparams = Nil,
-        vparamss = List(List(ValDef(Modifiers(Flags.PARAM), newTermName(publicName), TypeTree(selectedValue.tpt.tpe), EmptyTree))),
-        tpt = EmptyTree,
-        rhs = Block(
-            Assign(
-                Ident(privateName),
-                Ident(publicName)) :: Nil, EmptyTree))
+    def getter = q"""
+      def $publicName = {
+    	${Ident(privateName).asBlock}
+      }
+      """ copy (mods = Modifiers(Flags.METHOD) withPosition (Flags.METHOD, NoPosition))
+
+    def setter = {
+      val setterName = newTermName(publicName + "_=")
+      val valType = selectedValue.tpt.tpe
+      q"""
+      def $setterName($publicName: $valType) = {
+      	${q"$privateName = $publicName".asBlock}
+      }
+      """ copy (mods = Modifiers(Flags.METHOD) withPosition (Flags.METHOD, NoPosition))
+    }
 
     val insertGetterSettersTransformation = transform {
 
       case tpl: Template if tpl == template =>
 
-        val classParameters = tpl.body.map {
-          case t: ValDef if t == selectedValue => privateField setPos t.pos
-          case t => t
+        val classParameters = tpl.body.map { t =>
+          if (t == selectedValue) privateField setPos t.pos
+          else t
         }
 
-        val body = if(createSetter)
+        val body = if (createSetter)
           getter :: setter :: classParameters
         else
           getter :: classParameters
