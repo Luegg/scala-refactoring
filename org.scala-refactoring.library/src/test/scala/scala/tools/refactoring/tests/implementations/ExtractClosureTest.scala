@@ -59,9 +59,9 @@ class ExtractClosureTest extends util.TestRefactoring {
     """
       package extractClosure
       object Demo {
-	  	val osx = "MAC"
-    
 	  	def printOsInfo(os: String) = {
+  	  	  val osx = "MAC"
+    
 	  	  if(/*(*/os.toUpperCase.indexOf(osx) != -1/*)*/)
             println("you're using Mac OsX");
 	  	}
@@ -70,9 +70,9 @@ class ExtractClosureTest extends util.TestRefactoring {
       """
       package extractLocal
       object Demo {
-	  	val osx = "MAC"
-    
 	  	def printOsInfo(os: String) = {
+	  	  val osx = "MAC"
+    
     	  def isOs(osx: String) = 
             /*(*/os.toUpperCase.indexOf(osx) != -1/*)*/
     
