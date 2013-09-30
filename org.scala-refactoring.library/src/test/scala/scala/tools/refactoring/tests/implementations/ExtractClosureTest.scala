@@ -145,7 +145,7 @@ object Demo {
 }
 """ becomes
 """
-package extractLocal
+package extractClosure
 object Demo {
   def printOsInfo(os: String) = {
     val osx = "MAC"
@@ -173,7 +173,7 @@ object Demo extends App{
 }
 """ becomes
 """
-package extractLocal
+package extractClosure
 object Demo extends App{
   val os = System.getProperties.get("os.name")
   val osx = "MAC"
