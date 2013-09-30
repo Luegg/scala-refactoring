@@ -79,28 +79,27 @@ class ExtractClosureTest extends util.TestRefactoring {
     """).assertFailure
 
   @Test
-  def extractSimpleClosure = new FileSet {
+  def extractSimpleExpression = new FileSet {
     """
-	package extractClosure
-	object Demo{
-	  def printInfo = {
-	    println("nonsense")
-	    /*(*/println("hi")/*)*/
-	  }
-	}
-	""" becomes
+    package extractClosure
+    object Demo{
+      def printInfo = {
+        println("nonsense")
+        /*(*/println("hi")/*)*/
+      }
+    }
+    """ becomes
       """
-	package extractClosure
-	object Demo{
-	  def printInfo = {
-	    println("nonsense")
-	    def greet = {
-	      /*(*/println("hi")/*)*/
-	    }
-	    greet
-	  }
-	}
-	"""
+    package extractClosure
+    object Demo{
+      def printInfo = {
+        println("nonsense")
+        def greet() =
+          /*(*/println("hi")/*)*/
+        greet()
+      }
+    }
+    """
   } applyRefactoring (extract("greet", Nil))
 
   @Test
@@ -121,12 +120,12 @@ class ExtractClosureTest extends util.TestRefactoring {
 	object Demo{
 	  def printInfo = {
 	    println("nonsense")
-	    def mkGreeting ={
+	    def mkGreeting() ={
 	      /*(*/val greeting = "hello"
 	      val name = "world"/*)*/
 	      (greeting, name)
 	    }
-	    val (greeting, name) = mkGreeting
+	    val (greeting, name) = mkGreeting()
 	    println(greeting + name)
 	  }
 	}
@@ -151,10 +150,8 @@ class ExtractClosureTest extends util.TestRefactoring {
 	object Demo {
 	  def printOsInfo(os: String) = {
 	    val osx = "MAC"
-	
-	    def isOs(osx: String) = {
+	    def isOs(osx: String) =
 	      /*(*/os.toUpperCase.indexOf(osx) != -1/*)*/
-	    }
 	
 	    if(isOs(osx))
 	      println("you're using Mac OsX");
@@ -180,10 +177,8 @@ class ExtractClosureTest extends util.TestRefactoring {
 	object Demo extends App{
 	  val os = System.getProperties.get("os.name")
 	  val osx = "MAC"
-	
-	  def isOs(osx: String) = {
+	  def isOs(osx: String) =
 	    /*(*/os.toUpperCase.indexOf(osx) != -1/*)*/
-	  }
 	
 	  if(isOs(osx))
 	    println("you're using Mac OsX");

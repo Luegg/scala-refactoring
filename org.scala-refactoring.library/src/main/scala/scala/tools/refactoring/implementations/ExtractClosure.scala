@@ -40,36 +40,36 @@ abstract class ExtractClosure extends MultiStageRefactoring with TreeAnalysis wi
     val returns = outboundDependencies(selection)
 
     val closure = {
-      val paramVals = params.map(p => q"val ${TermName(p.nameString)}: ${p.tpe}")
+      val paramVals = params.map(p => q"val ${TermName(p.nameString)}: ${p.tpe}") :: Nil
       val returnStatement = if (returns.isEmpty) Nil else mkReturn(returns) :: Nil
-      val body = Block(q"..${selection.selectedTopLevelTrees}; ..$returnStatement", EmptyTree)
       q"""
-      def $closureName(..$paramVals) = {
-      	$body
+      def $closureName(...$paramVals) = {
+      	..${selection.selectedTopLevelTrees}
+        ..$returnStatement
       }
       """.copy(mods = Modifiers(Flags.METHOD) withPosition (Flags.METHOD, NoPosition))
     }
 
     val call = {
-      val args = params.map(p => Ident(p))
+      val args = params.map(p => Ident(p)) :: Nil
       returns match {
-        case Nil => q"$closureName(..$args)"
-        case r :: Nil => q"val r = $closureName(..$args)"
+        case Nil => q"$closureName(...$args)"
+        case r :: Nil => q"val r = $closureName(...$args)"
         case rs => {
           val tupple = newTermName("(" + (rs map (_.name) mkString ", ") + ")")
-          q"val $tupple = $closureName(..$args)"
+          q"val $tupple = $closureName(...$args)"
         }
       }
     }
-    
+
     val extractSingleStatement = selection.selectedTopLevelTrees.size == 1
-    
+
     val replaceExpression =
-      if(extractSingleStatement)
+      if (extractSingleStatement)
         replaceTree(selection.selectedTopLevelTrees.head, call)
       else
         fail[Tree]
-    
+
     val replaceBlock =
       transform {
         case block @ BlockExtractor(stats) if stats.size > 0 => {
@@ -78,28 +78,28 @@ abstract class ExtractClosure extends MultiStageRefactoring with TreeAnalysis wi
         }
       }
 
-    val enclosingTree = selection.findSelectedWithPredicate{
+    val enclosingTree = selection.findSelectedWithPredicate {
       case _: DefDef => true
       case _: Template => true
       case _ => false
     } getOrElse {
       return Left(RefactoringError("Can't extract closure from this position."))
     }
-        
+
     val findEnclosing = predicate((t: Tree) => t == enclosingTree)
-    
-    val insertClosureDef = transform{
+
+    val insertClosureDef = transform {
       case t @ DefDef(_, _, _, _, _, NoBlock(rhs)) =>
         t copy (rhs = Block(closure :: Nil, rhs))
       case t @ DefDef(_, _, _, _, _, Block(stats, expr)) => {
-        val (before, after) = stats.span{ t =>
-          t.pos.point <= selection.pos.start
+        val (before, after) = stats.span { t =>
+          t.pos.isRange && t.pos.point <= selection.pos.start
         }
         t copy (rhs = Block(before ::: closure :: after, expr))
       }
-      case t @ Template(_, _, body) =>{
-        val (before, after) = body.span{ t =>
-          t.pos.point <= selection.pos.start
+      case t @ Template(_, _, body) => {
+        val (before, after) = body.span { t =>
+          t.pos.isRange && t.pos.point <= selection.pos.start
         }
         t copy (body = before ::: closure :: after)
       }
@@ -108,7 +108,11 @@ abstract class ExtractClosure extends MultiStageRefactoring with TreeAnalysis wi
     val extractClosure = topdown {
       matchingChildren {
         findEnclosing &>
-        (replaceExpression |> replaceBlock) &>
+        topdown {
+          matchingChildren {
+            (replaceBlock |> replaceExpression)
+          }
+        } &>
         insertClosureDef
       }
     }
