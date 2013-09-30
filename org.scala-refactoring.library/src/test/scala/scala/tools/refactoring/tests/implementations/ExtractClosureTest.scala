@@ -80,110 +80,114 @@ class ExtractClosureTest extends util.TestRefactoring {
 
   @Test
   def extractSimpleClosure = new FileSet {
-"""
-package extractClosure
-object Demo{
-  def printInfo = {
-    println("nonsense")
-    /*(*/println("hi")/*)*/
-  }
-}
-""" becomes
-"""
-package extractClosure
-object Demo{
-  def printInfo = {
-    println("nonsense")
-    def greet = {
-      /*(*/println("hi")/*)*/
-    }
-    greet
-  }
-}
-""" } applyRefactoring (extract("greet", Nil))
+    """
+	package extractClosure
+	object Demo{
+	  def printInfo = {
+	    println("nonsense")
+	    /*(*/println("hi")/*)*/
+	  }
+	}
+	""" becomes
+      """
+	package extractClosure
+	object Demo{
+	  def printInfo = {
+	    println("nonsense")
+	    def greet = {
+	      /*(*/println("hi")/*)*/
+	    }
+	    greet
+	  }
+	}
+	"""
+  } applyRefactoring (extract("greet", Nil))
 
   @Test
   def extractSimpleBlock = new FileSet {
-"""
-package extractClosure
-object Demo{
-  def printInfo = {
-    println("nonsense")
-    /*(*/val greeting = "hello"
-    val name = "world"/*)*/
-    println(greeting + name)
-  }
-}
-""" becomes
-"""
-package extractClosure
-object Demo{
-  def printInfo = {
-    def mkGreeting ={
-      println("nonsense")
-      /*(*/val greeting = "hello"
-      val name = "world"/*)*/
-      (greeting, name)
-    }
-    val (greeting, name) = mkGreeting
-    println(greeting + name)
-  }
-}
-""" } applyRefactoring (extract("mkGreeting", Nil))
+    """
+	package extractClosure
+	object Demo{
+	  def printInfo = {
+	    println("nonsense")
+	    /*(*/val greeting = "hello"
+	    val name = "world"/*)*/
+	    println(greeting + name)
+	  }
+	}
+	""" becomes
+      """
+	package extractClosure
+	object Demo{
+	  def printInfo = {
+	    def mkGreeting ={
+	      println("nonsense")
+	      /*(*/val greeting = "hello"
+	      val name = "world"/*)*/
+	      (greeting, name)
+	    }
+	    val (greeting, name) = mkGreeting
+	    println(greeting + name)
+	  }
+	}
+	"""
+  } applyRefactoring (extract("mkGreeting", Nil))
 
   @Test
   def extractClosureFromDef = new FileSet {
-"""
-package extractClosure
-object Demo {
-  def printOsInfo(os: String) = {
-    val osx = "MAC"
-
-    if(/*(*/os.toUpperCase.indexOf(osx) != -1/*)*/)
-      println("you're using Mac OsX");
-  }
-}
-""" becomes
-"""
-package extractClosure
-object Demo {
-  def printOsInfo(os: String) = {
-    val osx = "MAC"
-
-    def isOs(osx: String) = {
-      /*(*/os.toUpperCase.indexOf(osx) != -1/*)*/
-    }
-
-    if(isOs(osx))
-      println("you're using Mac OsX");
-  }
-}
-""" } applyRefactoring (extract("isOs", "osx" :: Nil))
+    """
+	package extractClosure
+	object Demo {
+	  def printOsInfo(os: String) = {
+	    val osx = "MAC"
+	
+	    if(/*(*/os.toUpperCase.indexOf(osx) != -1/*)*/)
+	      println("you're using Mac OsX");
+	  }
+	}
+	""" becomes
+      """
+	package extractClosure
+	object Demo {
+	  def printOsInfo(os: String) = {
+	    val osx = "MAC"
+	
+	    def isOs(osx: String) = {
+	      /*(*/os.toUpperCase.indexOf(osx) != -1/*)*/
+	    }
+	
+	    if(isOs(osx))
+	      println("you're using Mac OsX");
+	  }
+	}
+	"""
+  } applyRefactoring (extract("isOs", "osx" :: Nil))
 
   @Test
   def extractClosureFromObject = new FileSet {
-"""
-package extractClosure
-object Demo extends App{
-  val os = System.getProperties.get("os.name")
-  val osx = "MAC"
-
-  if(/*(*/os.toUpperCase.indexOf(osx) != -1/*)*/)
-    println("you're using Mac OsX");
-}
-""" becomes
-"""
-package extractClosure
-object Demo extends App{
-  val os = System.getProperties.get("os.name")
-  val osx = "MAC"
-
-  def isOs(osx: String) = {
-    /*(*/os.toUpperCase.indexOf(osx) != -1/*)*/
-  }
-
-  if(isOs(osx))
-    println("you're using Mac OsX");
-}
-""" } applyRefactoring (extract("isOs", "osx" :: Nil))
+    """
+	package extractClosure
+	object Demo extends App{
+	  val os = System.getProperties.get("os.name")
+	  val osx = "MAC"
+	
+	  if(/*(*/os.toUpperCase.indexOf(osx) != -1/*)*/)
+	    println("you're using Mac OsX");
+	}
+	""" becomes
+      """
+	package extractClosure
+	object Demo extends App{
+	  val os = System.getProperties.get("os.name")
+	  val osx = "MAC"
+	
+	  def isOs(osx: String) = {
+	    /*(*/os.toUpperCase.indexOf(osx) != -1/*)*/
+	  }
+	
+	  if(isOs(osx))
+	    println("you're using Mac OsX");
+	}
+	"""
+  } applyRefactoring (extract("isOs", "osx" :: Nil))
 }
