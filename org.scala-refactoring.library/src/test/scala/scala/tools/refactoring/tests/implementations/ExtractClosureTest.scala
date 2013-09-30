@@ -4,11 +4,10 @@ package tests.implementations
 import tests.util
 import implementations.ExtractClosure
 import org.junit.Assert._
+import org.junit.Test
 
 class ExtractClosureTest extends util.TestRefactoring {
   import global._
-
-  type Params = ExtractClosure#RefactoringParameters
 
   def extract(closureName: String, closureParams: List[String])(files: FileSet) = new TestRefactoringImpl(files) {
     val refactoring = new ExtractClosure with SilentTracing with TestProjectIndex
@@ -21,17 +20,18 @@ class ExtractClosureTest extends util.TestRefactoring {
     val refactoringImpl = new TestRefactoringImpl(files) {
       val refactoring = new ExtractClosure with SilentTracing with TestProjectIndex
     }
+    val result = refactoringImpl.preparationResult
     
     new{
-      def assertSuccess = 
-        assertTrue(refactoringImpl.preparationResult.isRight)
+      def assertSuccess =
+        assertTrue(result.isRight)
       def assertFailure = 
-        assertTrue(refactoringImpl.preparationResult.isLeft)
+        assertTrue(result.isLeft)
     }
   }
 
   @Test
-  def prepareWithSelectedStatement = prepare(
+  def prepareWithSelectedStatementInObject = prepare(
     """
     package extractClosure
     object Demo {
@@ -42,17 +42,95 @@ class ExtractClosureTest extends util.TestRefactoring {
     }
     """
   ).assertSuccess
-    
+
   @Test
-  def prepareWithSelectedMethod = prepare(
+  def prepareWithSelectedStatementInMethod = prepare(
     """
     package extractClosure
     object Demo {
-      def /*(*/printString(v: Any)/*)*/ =
+	  val osx = "MAC"
+      
+      def printOsInfo =
+	    if(/*(*/os.toUpperCase.indexOf(osx) != -1/*)*/)
+          println("you're using Mac OsX");
+    }
+    """
+  ).assertSuccess
+  
+  @Test
+  def prepareBlock = prepare(
+    """
+    package extractClosure
+    object Demo {
+      def printThree = {
+        /*(*/val a = 1
+		val b = 2/*)*/
+        println(a+b)
+	  }
+    }
+    """
+  ).assertSuccess
+    
+  @Test
+  def prepareWithInvalidSelection = prepare(
+    """
+    package extractClosure
+    object Demo {
+      /*(*/def printString/*)*/(v: Any) =
         println(v.toString)
     }
     """
   ).assertFailure
+  
+  @Test
+  def extractSimpleClosure = new FileSet{
+    """
+    package extractClosure
+    object Demo{
+      def printInfo = {
+	  	/*(*/println("hi")/*)*/
+      }
+    }
+    """ becomes
+    """
+    package extractClosure
+    object Demo{
+      def printInfo = {
+    	def greet =
+    	  /*(*/println("hi")/*)*/
+    	greet
+      }
+    }
+    """
+  } applyRefactoring(extract("greet", Nil))
+  
+  @Test
+  def extractSimpleBlock = new FileSet{
+    """
+    package extractClosure
+    object Demo{
+      def printInfo = {
+	  	/*(*/val greeting = "hello"
+	  	val name = "world"/*)*/
+	  	println(greeting + name)
+      }
+    }
+    """ becomes
+    """
+    package extractClosure
+    object Demo{
+      def printInfo = {
+    	def mkGreeting ={
+    	  /*(*/val greeting = "hello"
+	  	  val name = "world"/*)*/
+    	  (greeting, name)
+    	}
+    	val (greeting, name) = mkGreeting
+    	println(greeting + name)
+      }
+    }
+    """
+  } applyRefactoring(extract("mkGreeting", Nil))
 
   @Test
   def extractClosureFromDef = new FileSet {
@@ -81,7 +159,7 @@ class ExtractClosureTest extends util.TestRefactoring {
 	  	}
       }
     """
-  } applyRefactoring (extract("isOs", "os" :: Nil))
+  } applyRefactoring (extract("isOs", "osx" :: Nil))
 
   @Test
   def extractClosureFromObject = new FileSet {
@@ -108,5 +186,5 @@ class ExtractClosureTest extends util.TestRefactoring {
           println("you're using Mac OsX");
       }
     """
-  } applyRefactoring (extract("isOs", "os" :: Nil))
+  } applyRefactoring (extract("isOs", "osx" :: Nil))
 }
