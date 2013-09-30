@@ -40,7 +40,7 @@ class ExtractClosureTest extends util.TestRefactoring {
 	  if(/*(*/os.toUpperCase.indexOf(osx) != -1/*)*/)
         println("you're using Mac OsX");
     }
-    """).assertSuccess
+    """).assertFailure
 
   @Test
   def prepareWithSelectedStatementInMethod = prepare(

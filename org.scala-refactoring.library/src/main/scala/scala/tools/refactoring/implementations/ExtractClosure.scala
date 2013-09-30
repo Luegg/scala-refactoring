@@ -10,7 +10,7 @@ import scala.reflect.internal.Flags
 abstract class ExtractClosure extends MultiStageRefactoring with TreeAnalysis with Indexes with CompilerAccess {
   import global._
 
-  case class PreparationResult(potentialParameters: List[Symbol])
+  case class PreparationResult(enclosingTree: Tree, potentialParameters: List[Symbol])
 
   case class RefactoringParameters(closureName: String, closureParameters: Symbol => Boolean)
 
@@ -29,7 +29,10 @@ abstract class ExtractClosure extends MultiStageRefactoring with TreeAnalysis wi
 
   def prepare(s: Selection): Either[PreparationError, PreparationResult] = {
     if (s.selectedTopLevelTrees.size > 0)
-      Right(PreparationResult(inboundDependencies(s)))
+      s.findSelectedOfType[DefDef] match{
+      	case Some(t) => Right(PreparationResult(t, inboundDependencies(s)))
+      	case None => Left(PreparationError("Can't extract closure from this position."))
+      }
     else
       Left(PreparationError("No expression or statement selected."))
   }
@@ -78,15 +81,7 @@ abstract class ExtractClosure extends MultiStageRefactoring with TreeAnalysis wi
         }
       }
 
-    val enclosingTree = selection.findSelectedWithPredicate {
-      case _: DefDef => true
-      case _: Template => true
-      case _ => false
-    } getOrElse {
-      return Left(RefactoringError("Can't extract closure from this position."))
-    }
-
-    val findEnclosing = predicate((t: Tree) => t == enclosingTree)
+    val findEnclosingTree = predicate((t: Tree) => t == preparation.enclosingTree)
 
     val insertClosureDef = transform {
       case t @ DefDef(_, _, _, _, _, NoBlock(rhs)) =>
@@ -97,17 +92,11 @@ abstract class ExtractClosure extends MultiStageRefactoring with TreeAnalysis wi
         }
         t copy (rhs = Block(before ::: closure :: after, expr))
       }
-      case t @ Template(_, _, body) => {
-        val (before, after) = body.span { t =>
-          t.pos.isRange && t.pos.point <= selection.pos.start
-        }
-        t copy (body = before ::: closure :: after)
-      }
     }
 
     val extractClosure = topdown {
       matchingChildren {
-        findEnclosing &>
+        findEnclosingTree &>
         topdown {
           matchingChildren {
             (replaceBlock |> replaceExpression)
