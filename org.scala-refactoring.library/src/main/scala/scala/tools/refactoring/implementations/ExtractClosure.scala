@@ -5,6 +5,7 @@ import common.Change
 import common.CompilerAccess
 import scala.tools.refactoring.analysis.TreeAnalysis
 import scala.tools.refactoring.analysis.Indexes
+import scala.reflect.internal.Flags
 
 abstract class ExtractClosure extends MultiStageRefactoring with TreeAnalysis with Indexes with CompilerAccess {
   import global._
@@ -22,9 +23,7 @@ abstract class ExtractClosure extends MultiStageRefactoring with TreeAnalysis wi
 
   def outboundDependencies(selection: Selection): List[Symbol] = {
     val declarationsInTheSelection = selection.selectedSymbols filter (s => index.declaration(s).map(selection.contains) getOrElse false)
-
     val occurencesOfSelectedDeclarations = declarationsInTheSelection flatMap (index.occurences)
-
     occurencesOfSelectedDeclarations.filterNot(selection.contains).map(_.symbol).distinct
   }
 
@@ -36,18 +35,76 @@ abstract class ExtractClosure extends MultiStageRefactoring with TreeAnalysis wi
   }
 
   def perform(selection: Selection, preparation: PreparationResult, userInput: RefactoringParameters): Either[RefactoringError, List[Change]] = {
+    val closureName = newTermName(userInput.closureName)
+    val params = preparation.potentialParameters.filter(userInput.closureParameters(_))
+    val returns = outboundDependencies(selection)
+
     val closure = {
-      val params = preparation.potentialParameters.filter(userInput.closureParameters(_))
-        .map(p => q"val ${TermName(p.nameString)}: ${p.tpe}")
-      val returns = outboundDependencies(selection)
+      val paramVals = params.map(p => q"val ${TermName(p.nameString)}: ${p.tpe}")
       val returnStatement = if (returns.isEmpty) Nil else mkReturn(returns) :: Nil
       q"""
-      def ${newTermName(userInput.closureName)}(..$params) = {
+      def $closureName(..$paramVals) = {
       	..${selection.selectedTopLevelTrees}
       	..$returnStatement
       }
-      """
+      """.copy(mods = Modifiers(Flags.METHOD) withPosition (Flags.METHOD, NoPosition))
     }
-    Left(RefactoringError("not yet implemented"))
+
+    val call = {
+      val args = params.map(p => Ident(p))
+      returns match {
+        case Nil => q"$closureName(..$args)"
+        case r :: Nil => q"val r = $closureName(..$args)"
+        case rs => {
+          val tupple = newTermName("(" + (rs map (_.name) mkString ", ") + ")")
+          q"val $tupple = $closureName(..$args)"
+        }
+      }
+    }
+    
+    val extractSingleStatement = selection.selectedTopLevelTrees.size == 1
+
+    val enclosingBlock = selection.findSelectedOfType[DefDef]
+      .getOrElse(selection.findSelectedOfType[Template]
+        .getOrElse(return Left(RefactoringError("Can't extract closure from this position."))))
+        
+    val findEnclosing = predicate((t: Tree) => t == enclosingBlock)
+    
+    println(enclosingBlock)
+    
+    val insertClosureDef = transform{
+      case t @ DefDef(_, _, _, _, _, NoBlock(rhs)) =>
+        t copy (rhs = Block(closure :: Nil, rhs))
+      case t @ DefDef(_, _, _, _, _, Block(stats, expr)) => {
+        val (before, after) = stats.span{ t =>
+          t.pos.point <= selection.pos.start
+        }
+        t copy (rhs = Block(before ::: closure :: after, expr))
+      }
+      case t @ Template(_, _, body) =>{
+        val (before, after) = body.span{ t =>
+          t.pos.point <= selection.pos.start
+        }
+        t copy (body = before ::: closure :: after)
+      }
+    }
+
+    val extractClosure = topdown {
+      matchingChildren {
+        findEnclosing &>
+        insertClosureDef
+//        transform {
+//          case block @ BlockExtractor(stats) if stats.size > 0 => {
+////            println("block extracted:")
+////            println(stats)
+////            val newStats = stats.replaceSequence(selection.selectedTopLevelTrees, closure :: call :: Nil)
+////            println(newStats)
+////            mkBlock(newStats) replaces block
+//          }
+//        }
+      }
+    }
+
+    Right(transformFile(selection.file, extractClosure))
   }
 }
