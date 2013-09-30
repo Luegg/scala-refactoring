@@ -120,8 +120,8 @@ class ExtractClosureTest extends util.TestRefactoring {
 	package extractClosure
 	object Demo{
 	  def printInfo = {
+	    println("nonsense")
 	    def mkGreeting ={
-	      println("nonsense")
 	      /*(*/val greeting = "hello"
 	      val name = "world"/*)*/
 	      (greeting, name)
