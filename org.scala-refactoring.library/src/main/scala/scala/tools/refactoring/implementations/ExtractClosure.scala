@@ -22,9 +22,7 @@ abstract class ExtractClosure extends MultiStageRefactoring with TreeAnalysis wi
   }
 
   def outboundDependencies(selection: Selection): List[Symbol] = {
-    val declarationsInTheSelection = selection.selectedSymbols filter (s => index.declaration(s).map(selection.contains) getOrElse false)
-    val occurencesOfSelectedDeclarations = declarationsInTheSelection flatMap (index.occurences)
-    occurencesOfSelectedDeclarations.filterNot(selection.contains).map(_.symbol).distinct
+	outboundLocalDependencies(selection, null)
   }
 
   def prepare(s: Selection): Either[PreparationError, PreparationResult] = {
@@ -38,32 +36,13 @@ abstract class ExtractClosure extends MultiStageRefactoring with TreeAnalysis wi
   }
 
   def perform(selection: Selection, preparation: PreparationResult, userInput: RefactoringParameters): Either[RefactoringError, List[Change]] = {
-    val closureName = newTermName(userInput.closureName)
     val params = preparation.potentialParameters.filter(userInput.closureParameters(_))
     val returns = outboundDependencies(selection)
 
-    val closure = {
-      val paramVals = params.map(p => q"val ${TermName(p.nameString)}: ${p.tpe}") :: Nil
-      val returnStatement = if (returns.isEmpty) Nil else mkReturn(returns) :: Nil
-      q"""
-      def $closureName(...$paramVals) = {
-      	..${selection.selectedTopLevelTrees}
-        ..$returnStatement
-      }
-      """.copy(mods = Modifiers(Flags.METHOD) withPosition (Flags.METHOD, NoPosition))
-    }
+    val returnStatement = if (returns.isEmpty) Nil else mkReturn(returns) :: Nil
+    val closure = mkDefDef(NoMods, userInput.closureName, params :: Nil, selection.selectedTopLevelTrees ::: returnStatement)
 
-    val call = {
-      val args = params.map(p => Ident(p)) :: Nil
-      returns match {
-        case Nil => q"$closureName(...$args)"
-        case r :: Nil => q"val r = $closureName(...$args)"
-        case rs => {
-          val tupple = newTermName("(" + (rs map (_.name) mkString ", ") + ")")
-          q"val $tupple = $closureName(...$args)"
-        }
-      }
-    }
+    val call = mkCallDefDef(userInput.closureName, params :: Nil, returns)
 
     val extractSingleStatement = selection.selectedTopLevelTrees.size == 1
 
@@ -81,6 +60,7 @@ abstract class ExtractClosure extends MultiStageRefactoring with TreeAnalysis wi
         }
       }
 
+    println(preparation.enclosingTree)
     val findEnclosingTree = predicate((t: Tree) => t == preparation.enclosingTree)
 
     val insertClosureDef = transform {
