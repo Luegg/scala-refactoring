@@ -94,7 +94,7 @@ class ExtractClosureTest extends util.TestRefactoring {
     object Demo{
       def printInfo = {
         println("nonsense")
-        def greet() =
+        def greet(): Unit =
           /*(*/println("hi")/*)*/
         greet()
       }
@@ -120,7 +120,7 @@ class ExtractClosureTest extends util.TestRefactoring {
 	object Demo{
 	  def printInfo = {
 	    println("nonsense")
-	    def mkGreeting() ={
+	    def mkGreeting(): (String, String) ={
 	      /*(*/val greeting = "hello"
 	      val name = "world"/*)*/
 	      (greeting, name)
@@ -150,7 +150,7 @@ class ExtractClosureTest extends util.TestRefactoring {
 	object Demo {
 	  def printOsInfo(os: String) = {
 	    val osx = "MAC"
-	    def isOs(osx: String) =
+	    def isOs(osx: String): Boolean =
 	      /*(*/os.toUpperCase.indexOf(osx) != -1/*)*/
 	
 	    if(isOs(osx))
@@ -178,7 +178,7 @@ class ExtractClosureTest extends util.TestRefactoring {
       def printInfo = {
         println("nonsense")
         def greet(name: String) = {
-          def extracted(name: String) =
+          def extracted(name: String): Unit =
             /*(*/println("hello " + name)/*)*/
           extracted(name)
         }
@@ -207,7 +207,7 @@ class ExtractClosureTest extends util.TestRefactoring {
         println("nonsense")
         (1 to 9).foreach{
           i => {
-            def extracted() =
+            def extracted(): Unit =
               /*(*/println(i)/*)*/
             extracted()
           }
@@ -216,31 +216,4 @@ class ExtractClosureTest extends util.TestRefactoring {
     }
     """
   } applyRefactoring(extract("extracted", Nil))
-
-  @Ignore
-  @Test
-  def extractClosureFromObject = new FileSet {
-    """
-	package extractClosure
-	object Demo extends App{
-	  val os = System.getProperties.get("os.name")
-	  val osx = "MAC"
-	
-	  if(/*(*/os.toUpperCase.indexOf(osx) != -1/*)*/)
-	    println("you're using Mac OsX");
-	}
-	""" becomes
-      """
-	package extractClosure
-	object Demo extends App{
-	  val os = System.getProperties.get("os.name")
-	  val osx = "MAC"
-	  def isOs(osx: String) =
-	    /*(*/os.toUpperCase.indexOf(osx) != -1/*)*/
-	
-	  if(isOs(osx))
-	    println("you're using Mac OsX");
-	}
-	"""
-  } applyRefactoring (extract("isOs", "osx" :: Nil))
 }
