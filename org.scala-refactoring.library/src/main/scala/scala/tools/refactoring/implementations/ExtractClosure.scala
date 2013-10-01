@@ -27,7 +27,10 @@ abstract class ExtractClosure extends MultiStageRefactoring with TreeAnalysis wi
 
   def prepare(s: Selection): Either[PreparationError, PreparationResult] = {
     if (s.selectedTopLevelTrees.size > 0)
-      s.findSelectedOfType[DefDef] match{
+      s.findSelectedWithPredicate{
+        case _: DefDef | _: Function | _: CaseDef | _: Block => true
+        case _ => false
+      } match {
       	case Some(t) => Right(PreparationResult(t, inboundDependencies(s)))
       	case None => Left(PreparationError("Can't extract closure from this position."))
       }
@@ -63,14 +66,18 @@ abstract class ExtractClosure extends MultiStageRefactoring with TreeAnalysis wi
     val findEnclosingTree = predicate((t: Tree) => t == preparation.enclosingTree)
 
     val insertClosureDef = transform {
+      case t @ Block(stats, expr) => {
+        val (before, after) = stats.span { t =>
+          t.pos.isRange && t.pos.end <= selection.pos.start
+        }
+        t copy (stats = before ::: closure :: after)
+      }
       case t @ DefDef(_, _, _, _, _, NoBlock(rhs)) =>
         t copy (rhs = Block(closure :: Nil, rhs))
-      case t @ DefDef(_, _, _, _, _, Block(stats, expr)) => {
-        val (before, after) = stats.span { t =>
-          t.pos.isRange && t.pos.point <= selection.pos.start
-        }
-        t copy (rhs = Block(before ::: closure :: after, expr))
-      }
+      case t @ Function(_, body) =>
+        t copy (body = Block(closure :: Nil, body))
+      case t @ CaseDef(_, _, body) =>
+        t copy (body = Block(closure :: Nil, body))
     }
 
     val extractClosure = topdown {
@@ -78,7 +85,7 @@ abstract class ExtractClosure extends MultiStageRefactoring with TreeAnalysis wi
         findEnclosingTree &>
         topdown {
           matchingChildren {
-            (replaceBlock |> replaceExpression)
+            replaceExpression
           }
         } &>
         insertClosureDef
