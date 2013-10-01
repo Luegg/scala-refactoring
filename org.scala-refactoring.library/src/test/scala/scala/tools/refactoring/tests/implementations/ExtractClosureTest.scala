@@ -94,9 +94,10 @@ class ExtractClosureTest extends util.TestRefactoring {
     object Demo{
       def printInfo = {
         println("nonsense")
-        def greet(): Unit =
+        def greet: Unit = {
           /*(*/println("hi")/*)*/
-        greet()
+    	}
+        greet
       }
     }
     """
@@ -120,12 +121,12 @@ class ExtractClosureTest extends util.TestRefactoring {
 	object Demo{
 	  def printInfo = {
 	    println("nonsense")
-	    def mkGreeting(): (String, String) = {
+	    def mkGreeting: (String, String) = {
 	      /*(*/val greeting = "hello"
 	      val name = "world"/*)*/
 	      (greeting, name)
 	    }
-	    val (greeting, name) = mkGreeting()
+	    val (greeting, name) = mkGreeting
 	    println(greeting + name)
 	  }
 	}
@@ -150,8 +151,9 @@ class ExtractClosureTest extends util.TestRefactoring {
 	object Demo {
 	  def printOsInfo(os: String) = {
 	    val osx = "MAC"
-	    def isOs(osx: String): Boolean =
+	    def isOs(osx: String): Boolean = {
 	      /*(*/os.toUpperCase.indexOf(osx) != -1/*)*/
+		}
 	
 	    if(isOs(osx))
 	      println("you're using Mac OsX");
@@ -178,8 +180,9 @@ class ExtractClosureTest extends util.TestRefactoring {
       def printInfo = {
         println("nonsense")
         def greet(name: String) = {
-          def extracted(name: String): Unit =
+          def extracted(name: String): Unit = {
             /*(*/println("hello " + name)/*)*/
+    	  }
           extracted(name)
         }
       }
@@ -207,9 +210,10 @@ class ExtractClosureTest extends util.TestRefactoring {
         println("nonsense")
         (1 to 9).foreach{
           i => {
-            def extracted(): Unit =
+            def extracted: Unit = {
               /*(*/println(i)/*)*/
-            extracted()
+            }
+            extracted
           }
         }
       }

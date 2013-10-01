@@ -22,17 +22,17 @@ abstract class ExtractClosure extends MultiStageRefactoring with TreeAnalysis wi
   }
 
   def outboundDependencies(selection: Selection): List[Symbol] = {
-	outboundLocalDependencies(selection, null)
+    outboundLocalDependencies(selection, null)
   }
 
   def prepare(s: Selection): Either[PreparationError, PreparationResult] = {
     if (s.selectedTopLevelTrees.size > 0)
-      s.findSelectedWithPredicate{
+      s.findSelectedWithPredicate {
         case _: DefDef | _: Function | _: CaseDef | _: Block => true
         case _ => false
       } match {
-      	case Some(t) => Right(PreparationResult(t, inboundDependencies(s)))
-      	case None => Left(PreparationError("Can't extract closure from this position."))
+        case Some(t) => Right(PreparationResult(t, inboundDependencies(s)))
+        case None => Left(PreparationError("Can't extract closure from this position."))
       }
     else
       Left(PreparationError("No expression or statement selected."))
@@ -43,19 +43,23 @@ abstract class ExtractClosure extends MultiStageRefactoring with TreeAnalysis wi
     val returns = outboundDependencies(selection)
 
     val returnStatement = if (returns.isEmpty) Nil else mkReturn(returns) :: Nil
-    val closure = mkDefDef(NoMods, userInput.closureName, params :: Nil, selection.selectedTopLevelTrees ::: returnStatement)
+    val closure = mkDefDef(
+      NoMods,
+      userInput.closureName,
+      if (params.isEmpty) Nil else params :: Nil,
+      selection.selectedTopLevelTrees ::: returnStatement)
 
     val call = mkCallDefDef(userInput.closureName, params :: Nil, returns)
 
     val extractSingleStatement = selection.selectedTopLevelTrees.size == 1
 
-    val replaceExpression =
+    val replaceExpressionWithCall =
       if (extractSingleStatement)
         replaceTree(selection.selectedTopLevelTrees.head, call)
       else
         fail[Tree]
 
-    val replaceBlock =
+    val replaceBlockWithCall =
       transform {
         case block @ BlockExtractor(stats) if stats.size > 0 => {
           val newStats = stats.replaceSequence(selection.selectedTopLevelTrees, call :: Nil)
@@ -83,7 +87,16 @@ abstract class ExtractClosure extends MultiStageRefactoring with TreeAnalysis wi
     val extractClosure = topdown {
       matchingChildren {
         findEnclosingTree &>
-        replaceExpression &>
+        {
+          // first try to replace direct children
+          replaceBlockWithCall |> replaceExpressionWithCall |>
+          // otherwise replace in subtrees
+          topdown {
+            matchingChildren {
+              (replaceBlockWithCall |> replaceExpressionWithCall)
+            }
+          }
+        } &>
         insertClosureDef
       }
     }
