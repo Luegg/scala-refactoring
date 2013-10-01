@@ -60,7 +60,6 @@ abstract class ExtractClosure extends MultiStageRefactoring with TreeAnalysis wi
         }
       }
 
-    println(preparation.enclosingTree)
     val findEnclosingTree = predicate((t: Tree) => t == preparation.enclosingTree)
 
     val insertClosureDef = transform {
