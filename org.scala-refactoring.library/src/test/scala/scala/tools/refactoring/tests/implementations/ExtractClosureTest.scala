@@ -159,6 +159,63 @@ class ExtractClosureTest extends util.TestRefactoring {
 	}
 	"""
   } applyRefactoring (extract("isOs", "osx" :: Nil))
+  
+  @Test
+  def extractFromClosure = new FileSet {
+    """
+    package extractClosure
+    object Demo{
+      def printInfo = {
+        println("nonsense")
+        def greet(name: String) =
+          /*(*/println("hello " + name)/*)*/
+      }
+    }
+    """ becomes
+    """
+    package extractClosure
+    object Demo{
+      def printInfo = {
+        println("nonsense")
+        def greet(name: String) = {
+          def extracted(name: String) =
+            /*(*/println("hello " + name)/*)*/
+          extracted(name)
+        }
+      }
+    }
+    """
+  } applyRefactoring(extract("extracted", "name" :: Nil))
+  
+  @Test
+  def extractFromAnonymousFunction = new FileSet {
+    """
+    package extractClosure
+    object Demo{
+      def printInfo = {
+        println("nonsense")
+        (1 to 9).foreach{
+          i => /*(*/println(i)/*)*/
+        }
+      }
+    }
+    """ becomes
+    """
+    package extractClosure
+    object Demo{
+      def printInfo = {
+        println("nonsense")
+        (1 to 9).foreach{
+          i => {
+            def extracted() =
+              /*(*/println(i)/*)*/
+            extracted()
+          }
+        }
+      }
+    }
+    """
+  } applyRefactoring(extract("extracted", Nil))
 
   @Ignore
   @Test
