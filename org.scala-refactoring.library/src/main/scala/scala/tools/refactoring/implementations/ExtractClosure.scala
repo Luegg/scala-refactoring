@@ -83,11 +83,7 @@ abstract class ExtractClosure extends MultiStageRefactoring with TreeAnalysis wi
     val extractClosure = topdown {
       matchingChildren {
         findEnclosingTree &>
-        topdown {
-          matchingChildren {
-            replaceExpression
-          }
-        } &>
+        replaceExpression &>
         insertClosureDef
       }
     }
