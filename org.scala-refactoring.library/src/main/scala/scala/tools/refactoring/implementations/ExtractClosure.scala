@@ -21,10 +21,6 @@ abstract class ExtractClosure extends MultiStageRefactoring with TreeAnalysis wi
     ) yield selected
   }
 
-  def outboundDependencies(selection: Selection): List[Symbol] = {
-    outboundLocalDependencies(selection, null)
-  }
-
   def prepare(s: Selection): Either[PreparationError, PreparationResult] = {
     if (s.selectedTopLevelTrees.size > 0)
       s.findSelectedWithPredicate {
@@ -40,7 +36,7 @@ abstract class ExtractClosure extends MultiStageRefactoring with TreeAnalysis wi
 
   def perform(selection: Selection, preparation: PreparationResult, userInput: RefactoringParameters): Either[RefactoringError, List[Change]] = {
     val params = preparation.potentialParameters.filter(userInput.closureParameters(_))
-    val returns = outboundDependencies(selection)
+    val returns = outboundLocalDependencies(selection)
 
     val returnStatement = if (returns.isEmpty) Nil else mkReturn(returns) :: Nil
     val closure = mkDefDef(
@@ -93,7 +89,7 @@ abstract class ExtractClosure extends MultiStageRefactoring with TreeAnalysis wi
           // otherwise replace in subtrees
           topdown {
             matchingChildren {
-              (replaceBlockWithCall |> replaceExpressionWithCall)
+              (replaceExpressionWithCall)
             }
           }
         } &>
