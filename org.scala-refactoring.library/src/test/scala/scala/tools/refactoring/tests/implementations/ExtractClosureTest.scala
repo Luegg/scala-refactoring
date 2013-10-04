@@ -212,6 +212,32 @@ class ExtractClosureTest extends util.TestRefactoring {
     }
     """
   } applyRefactoring (extract("printOsIfEqual", "osx" :: Nil))
+
+  @Test
+  def extractExpressionWithOutboundDepUsedTwice = new FileSet {
+    """
+    package extractClosure
+    object Demo {
+      def calc = {
+        /*(*/val a = 1/*)*/
+        a + a
+      }
+    }
+    """ becomes
+      """
+    package extractClosure
+    object Demo {
+      def calc = {
+        def extracted: Int = {
+          /*(*/val a = 1/*)*/
+          a
+        }
+        val a = extracted
+        a + a
+      }
+    }
+    """
+  } applyRefactoring (extract("extracted", Nil))
   
   @Test
   def extractFromInnerDef = new FileSet {

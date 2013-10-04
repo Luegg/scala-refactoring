@@ -27,7 +27,7 @@ abstract class ExtractClosure extends MultiStageRefactoring with TreeAnalysis wi
         case _: DefDef | _: Function | _: CaseDef | _: Block => true
         case _ => false
       } match {
-        case Some(t) => Right(PreparationResult(t, inboundDependencies(s)))
+        case Some(t) => Right(PreparationResult(t, inboundDependencies(s).distinct))
         case None => Left(PreparationError("Can't extract closure from this position."))
       }
     else
@@ -36,7 +36,7 @@ abstract class ExtractClosure extends MultiStageRefactoring with TreeAnalysis wi
 
   def perform(selection: Selection, preparation: PreparationResult, userInput: RefactoringParameters): Either[RefactoringError, List[Change]] = {
     val params = preparation.potentialParameters.filter(userInput.closureParameters(_))
-    val returns = outboundLocalDependencies(selection)
+    val returns = outboundLocalDependencies(selection).distinct
 
     val returnStatement = if (returns.isEmpty) Nil else mkReturn(returns) :: Nil
     val closure = mkDefDef(
