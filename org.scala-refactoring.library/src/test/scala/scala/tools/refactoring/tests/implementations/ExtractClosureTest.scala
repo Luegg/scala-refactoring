@@ -106,6 +106,33 @@ class ExtractClosureTest extends util.TestRefactoring {
   @Test
   def extractSimpleBlock = new FileSet {
     """
+    package extractClosure
+    object Demo{
+      def printInfo = {
+        println("nonsense")
+        /*(*/println("hello")
+	  	println("world")/*)*/
+      }
+    }
+    """ becomes
+      """
+    package extractClosure
+    object Demo{
+      def printInfo = {
+        println("nonsense")
+        def greet: Unit = {
+          /*(*/println("hello")
+    	  println("world")/*)*/
+    	}
+        greet
+      }
+    }
+    """
+  } applyRefactoring (extract("greet", Nil))
+
+  @Test
+  def extractBlockWith2OutboundDependencies = new FileSet {
+    """
 	package extractClosure
 	object Demo{
 	  def printInfo = {
@@ -132,17 +159,41 @@ class ExtractClosureTest extends util.TestRefactoring {
 	}
 	"""
   } applyRefactoring (extract("mkGreeting", Nil))
+  
+  @Test
+  def extractExpressionWithParams = new FileSet {
+    """
+    package extractClosure
+    object Demo {
+	  def calc = {
+	    val (a, b, c) = (1, 2, 3)
+	  	/*(*/println(a + b + c)/*)*/
+	  }
+    }
+    """ becomes
+    """
+    package extractClosure
+    object Demo {
+	  def calc = {
+	    val (a, b, c) = (1, 2, 3)
+    	def printRes(a: Int, b: Int) = {
+    	  /*(*/println(a + b + c)/*)*/
+    	}
+    	printres
+	  }
+    }
+    """
+  } applyRefactoring(extract("printRes", "a" :: "b" :: Nil))
 
   @Test
-  def extractExpressionWithParam = new FileSet {
+  def extractBlockWith1ParamUsedTwice = new FileSet {
     """
 	package extractClosure
 	object Demo {
 	  def printOsInfo(os: String) = {
 	    val osx = "MAC"
-	
-	    if(/*(*/os.toUpperCase.indexOf(osx) != -1/*)*/)
-	      println("you're using Mac OsX");
+	    /*(*/if(os.toUpperCase.indexOf(osx) != -1)
+	      println("you're using " + osx);/*)*/
 	  }
 	}
 	""" becomes
@@ -151,19 +202,19 @@ class ExtractClosureTest extends util.TestRefactoring {
 	object Demo {
 	  def printOsInfo(os: String) = {
 	    val osx = "MAC"
-	    def isOs(osx: String): Boolean = {
-	      /*(*/os.toUpperCase.indexOf(osx) != -1/*)*/
+	    def printOsIfEqual(osx: String): Boolean = {
+	      /*(*/if(os.toUpperCase.indexOf(osx) != -1)
+	        println("you're using Mac OsX");/*)*/
 		}
 	
-	    if(isOs(osx))
-	      println("you're using Mac OsX");
+		printOsIfEqual(osx)
 	  }
 	}
 	"""
-  } applyRefactoring (extract("isOs", "osx" :: Nil))
+  } applyRefactoring (extract("printOsIfEqual", "osx" :: Nil))
   
   @Test
-  def extractFromClosure = new FileSet {
+  def extractFromInnerDef = new FileSet {
     """
     package extractClosure
     object Demo{
@@ -220,4 +271,112 @@ class ExtractClosureTest extends util.TestRefactoring {
     }
     """
   } applyRefactoring(extract("extracted", Nil))
+  
+  @Test
+  def extractFromCase = new FileSet{
+    """
+    package extractClosure
+    object Demo{
+      1 match{
+	  	case a: Int => /*(*/println(a)/*)*/
+      }
+    }
+    """ becomes
+    """
+    package extractClosure
+    object Demo{
+      1 match{
+	  	case a: Int => {
+    	  def out(a: Int) = {
+    		/*(*/println(a)/*)*/
+    	  }
+    	  out(a)
+    	}
+      }
+    }
+    """
+  } applyRefactoring(extract("out", "a" :: Nil))
+  
+  @Test
+  def extractFromNonBlock = new FileSet{
+    """
+    package extractClosure
+    object Demo{
+      def calc(a: Int) = {
+	    if(a <= 7)
+	  	  if(a >= 3)
+            /*(*/3 * a/*)*/
+      }
+    }
+    """ becomes
+    """
+    package extractClosure
+    object Demo{
+      def calc(a: Int) = {
+    	def extracted(a: Int) = {
+    	  /*(*/3 * a/*)*/
+        }
+	    if(a <= 7)
+	  	  if(a >= 3)
+            extracted(a)
+      }
+    }
+    """
+  } applyRefactoring(extract("extracted", "a" :: Nil))
+  
+  @Test
+  def extractFromForEnumerator = new FileSet{
+    """
+    package extractClosure
+    object Demo{
+      def list(a: Int) = {
+	    for(
+	  	  i <- /*(*/a :: Nil/*)*/
+	  	) yield i
+      }
+    }
+    """ becomes
+    """
+    package extractClosure
+    object Demo{
+      def list(a: Int) = {
+    	def extracted(a: Int): List[Int] = {
+    	  /*(*/a :: Nil/*)*/
+    	}
+	    for(
+	  	  i <- extracted(a)
+	  	) yield i
+      }
+    }
+    """
+  } applyRefactoring(extract("extracted", "a" :: Nil))
+  
+  @Test
+  def extractFromYield = new FileSet{
+    """
+    package extractClosure
+    object Demo{
+      def list(a: Int) = {
+	    for(
+	  	  i <- 1 to 10
+	  	) yield /*(*/i * a/*)*/
+      }
+    }
+    """ becomes
+    """
+    package extractClosure
+    object Demo{
+      def list(a: Int) = {
+	    for(
+	  	  i <- 1 to 10
+	  	) yield {
+    	  def extracted(a: Int) = {
+    		/*(*/i * a/*)*/
+    	  }
+    	  extracted(a)
+    	}
+      }
+    }
+    """
+  } applyRefactoring(extract("extracted", "a" :: Nil))
 }
