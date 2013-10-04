@@ -176,7 +176,7 @@ class ExtractClosureTest extends util.TestRefactoring {
     object Demo {
       def calc = {
         val (a, b, c) = (1, 2, 3)
-        def printRes(a: Int, b: Int) = {
+        def printRes(a: Int, b: Int): Unit = {
           /*(*/println(a + b + c)/*)*/
         }
         printres
@@ -202,7 +202,7 @@ class ExtractClosureTest extends util.TestRefactoring {
     object Demo {
       def printOsInfo(os: String) = {
         val osx = "MAC"
-        def printOsIfEqual(osx: String): Boolean = {
+        def printOsIfEqual(osx: String): Unit = {
           /*(*/if(os.toUpperCase.indexOf(osx) != -1)
           println("you're using Mac OsX");/*)*/
         }
@@ -286,7 +286,7 @@ class ExtractClosureTest extends util.TestRefactoring {
     object Demo{
       1 match{
         case a: Int => 
-          def out(a: Int) = {
+          def out(a: Int): Unit = {
             /*(*/println(a)/*)*/
           }
           out(a)
@@ -311,7 +311,7 @@ class ExtractClosureTest extends util.TestRefactoring {
     package extractClosure
     object Demo{
       def calc(a: Int) = {
-        def extracted(a: Int) = {
+        def extracted(a: Int): Int = {
           /*(*/3 * a/*)*/
         }
         if(a <= 7)
@@ -368,7 +368,7 @@ class ExtractClosureTest extends util.TestRefactoring {
         for(
             i <- 1 to 10
           ) yield {
-          def extracted(a: Int) = {
+          def extracted(a: Int): Int = {
             /*(*/i * a/*)*/
           }
           extracted(a)
