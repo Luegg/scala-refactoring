@@ -35,9 +35,9 @@ class ExtractClosureTest extends util.TestRefactoring {
     """
     package extractClosure
     object Demo {
-	  val osx = "MAC"
+      val osx = "MAC"
       
-	  if(/*(*/os.toUpperCase.indexOf(osx) != -1/*)*/)
+      if(/*(*/os.toUpperCase.indexOf(osx) != -1/*)*/)
         println("you're using Mac OsX");
     }
     """).assertFailure
@@ -47,10 +47,10 @@ class ExtractClosureTest extends util.TestRefactoring {
     """
     package extractClosure
     object Demo {
-	  val osx = "MAC"
+      val osx = "MAC"
       
       def printOsInfo =
-	    if(/*(*/os.toUpperCase.indexOf(osx) != -1/*)*/)
+        if(/*(*/os.toUpperCase.indexOf(osx) != -1/*)*/)
           println("you're using Mac OsX");
     }
     """).assertSuccess
@@ -62,9 +62,9 @@ class ExtractClosureTest extends util.TestRefactoring {
     object Demo {
       def printThree = {
         /*(*/val a = 1
-		val b = 2/*)*/
+        val b = 2/*)*/
         println(a+b)
-	  }
+      }
     }
     """).assertSuccess
 
@@ -74,7 +74,7 @@ class ExtractClosureTest extends util.TestRefactoring {
     package extractClosure
     object Demo {
       /*(*/def printString/*)*/(v: Any) =
-        println(v.toString)
+      println(v.toString)
     }
     """).assertFailure
 
@@ -96,7 +96,7 @@ class ExtractClosureTest extends util.TestRefactoring {
         println("nonsense")
         def greet: Unit = {
           /*(*/println("hi")/*)*/
-    	}
+        }
         greet
       }
     }
@@ -111,7 +111,7 @@ class ExtractClosureTest extends util.TestRefactoring {
       def printInfo = {
         println("nonsense")
         /*(*/println("hello")
-	  	println("world")/*)*/
+        println("world")/*)*/
       }
     }
     """ becomes
@@ -122,8 +122,8 @@ class ExtractClosureTest extends util.TestRefactoring {
         println("nonsense")
         def greet: Unit = {
           /*(*/println("hello")
-    	  println("world")/*)*/
-    	}
+          println("world")/*)*/
+        }
         greet
       }
     }
@@ -133,31 +133,31 @@ class ExtractClosureTest extends util.TestRefactoring {
   @Test
   def extractBlockWith2OutboundDependencies = new FileSet {
     """
-	package extractClosure
-	object Demo{
-	  def printInfo = {
-	    println("nonsense")
-	    /*(*/val greeting = "hello"
-	    val name = "world"/*)*/
-	    println(greeting + name)
-	  }
-	}
-	""" becomes
+    package extractClosure
+    object Demo{
+      def printInfo = {
+        println("nonsense")
+        /*(*/val greeting = "hello"
+        val name = "world"/*)*/
+        println(greeting + name)
+      }
+    }
+    """ becomes
       """
-	package extractClosure
-	object Demo{
-	  def printInfo = {
-	    println("nonsense")
-	    def mkGreeting: (String, String) = {
-	      /*(*/val greeting = "hello"
-	      val name = "world"/*)*/
-	      (greeting, name)
-	    }
-	    val (greeting, name) = mkGreeting
-	    println(greeting + name)
-	  }
-	}
-	"""
+    package extractClosure
+    object Demo{
+      def printInfo = {
+        println("nonsense")
+        def mkGreeting: (String, String) = {
+          /*(*/val greeting = "hello"
+          val name = "world"/*)*/
+          (greeting, name)
+        }
+        val (greeting, name) = mkGreeting
+        println(greeting + name)
+      }
+    }
+    """
   } applyRefactoring (extract("mkGreeting", Nil))
   
   @Test
@@ -165,22 +165,22 @@ class ExtractClosureTest extends util.TestRefactoring {
     """
     package extractClosure
     object Demo {
-	  def calc = {
-	    val (a, b, c) = (1, 2, 3)
-	  	/*(*/println(a + b + c)/*)*/
-	  }
+      def calc = {
+        val (a, b, c) = (1, 2, 3)
+        /*(*/println(a + b + c)/*)*/
+      }
     }
     """ becomes
     """
     package extractClosure
     object Demo {
-	  def calc = {
-	    val (a, b, c) = (1, 2, 3)
-    	def printRes(a: Int, b: Int) = {
-    	  /*(*/println(a + b + c)/*)*/
-    	}
-    	printres
-	  }
+      def calc = {
+        val (a, b, c) = (1, 2, 3)
+        def printRes(a: Int, b: Int) = {
+          /*(*/println(a + b + c)/*)*/
+        }
+        printres
+      }
     }
     """
   } applyRefactoring(extract("printRes", "a" :: "b" :: Nil))
@@ -188,29 +188,29 @@ class ExtractClosureTest extends util.TestRefactoring {
   @Test
   def extractBlockWith1ParamUsedTwice = new FileSet {
     """
-	package extractClosure
-	object Demo {
-	  def printOsInfo(os: String) = {
-	    val osx = "MAC"
-	    /*(*/if(os.toUpperCase.indexOf(osx) != -1)
-	      println("you're using " + osx);/*)*/
-	  }
-	}
-	""" becomes
+    package extractClosure
+    object Demo {
+      def printOsInfo(os: String) = {
+        val osx = "MAC"
+        /*(*/if(os.toUpperCase.indexOf(osx) != -1)
+        println("you're using " + osx);/*)*/
+      }
+    }
+    """ becomes
       """
-	package extractClosure
-	object Demo {
-	  def printOsInfo(os: String) = {
-	    val osx = "MAC"
-	    def printOsIfEqual(osx: String): Boolean = {
-	      /*(*/if(os.toUpperCase.indexOf(osx) != -1)
-	        println("you're using Mac OsX");/*)*/
-		}
-	
-		printOsIfEqual(osx)
-	  }
-	}
-	"""
+    package extractClosure
+    object Demo {
+      def printOsInfo(os: String) = {
+        val osx = "MAC"
+        def printOsIfEqual(osx: String): Boolean = {
+          /*(*/if(os.toUpperCase.indexOf(osx) != -1)
+          println("you're using Mac OsX");/*)*/
+        }
+    
+        printOsIfEqual(osx)
+      }
+    }
+    """
   } applyRefactoring (extract("printOsIfEqual", "osx" :: Nil))
   
   @Test
@@ -233,7 +233,7 @@ class ExtractClosureTest extends util.TestRefactoring {
         def greet(name: String) = {
           def extracted(name: String): Unit = {
             /*(*/println("hello " + name)/*)*/
-    	  }
+          }
           extracted(name)
         }
       }
@@ -278,7 +278,7 @@ class ExtractClosureTest extends util.TestRefactoring {
     package extractClosure
     object Demo{
       1 match{
-	  	case a: Int => /*(*/println(a)/*)*/
+        case a: Int => /*(*/println(a)/*)*/
       }
     }
     """ becomes
@@ -286,12 +286,11 @@ class ExtractClosureTest extends util.TestRefactoring {
     package extractClosure
     object Demo{
       1 match{
-	  	case a: Int => {
-    	  def out(a: Int) = {
-    		/*(*/println(a)/*)*/
-    	  }
-    	  out(a)
-    	}
+        case a: Int => 
+          def out(a: Int) = {
+            /*(*/println(a)/*)*/
+          }
+          out(a)
       }
     }
     """
@@ -303,8 +302,8 @@ class ExtractClosureTest extends util.TestRefactoring {
     package extractClosure
     object Demo{
       def calc(a: Int) = {
-	    if(a <= 7)
-	  	  if(a >= 3)
+        if(a <= 7)
+          if(a >= 3)
             /*(*/3 * a/*)*/
       }
     }
@@ -313,11 +312,11 @@ class ExtractClosureTest extends util.TestRefactoring {
     package extractClosure
     object Demo{
       def calc(a: Int) = {
-    	def extracted(a: Int) = {
-    	  /*(*/3 * a/*)*/
+        def extracted(a: Int) = {
+          /*(*/3 * a/*)*/
         }
-	    if(a <= 7)
-	  	  if(a >= 3)
+        if(a <= 7)
+          if(a >= 3)
             extracted(a)
       }
     }
@@ -330,9 +329,9 @@ class ExtractClosureTest extends util.TestRefactoring {
     package extractClosure
     object Demo{
       def list(a: Int) = {
-	    for(
-	  	  i <- /*(*/a :: Nil/*)*/
-	  	) yield i
+        for(
+            i <- /*(*/a :: Nil/*)*/
+          ) yield i
       }
     }
     """ becomes
@@ -340,12 +339,12 @@ class ExtractClosureTest extends util.TestRefactoring {
     package extractClosure
     object Demo{
       def list(a: Int) = {
-    	def extracted(a: Int): List[Int] = {
-    	  /*(*/a :: Nil/*)*/
-    	}
-	    for(
-	  	  i <- extracted(a)
-	  	) yield i
+        def extracted(a: Int): List[Int] = {
+          /*(*/a :: Nil/*)*/
+        }
+        for(
+            i <- extracted(a)
+          ) yield i
       }
     }
     """
@@ -357,9 +356,9 @@ class ExtractClosureTest extends util.TestRefactoring {
     package extractClosure
     object Demo{
       def list(a: Int) = {
-	    for(
-	  	  i <- 1 to 10
-	  	) yield /*(*/i * a/*)*/
+        for(
+            i <- 1 to 10
+          ) yield /*(*/i * a/*)*/
       }
     }
     """ becomes
@@ -367,14 +366,14 @@ class ExtractClosureTest extends util.TestRefactoring {
     package extractClosure
     object Demo{
       def list(a: Int) = {
-	    for(
-	  	  i <- 1 to 10
-	  	) yield {
-    	  def extracted(a: Int) = {
-    		/*(*/i * a/*)*/
-    	  }
-    	  extracted(a)
-    	}
+        for(
+            i <- 1 to 10
+          ) yield {
+          def extracted(a: Int) = {
+            /*(*/i * a/*)*/
+          }
+          extracted(a)
+        }
       }
     }
     """
