@@ -10,7 +10,10 @@ import scala.reflect.internal.Flags
 abstract class ExtractClosure extends MultiStageRefactoring with TreeAnalysis with Indexes with CompilerAccess {
   import global._
 
-  case class PreparationResult(enclosingTree: Tree, potentialParameters: List[Symbol])
+  case class PreparationResult(
+      enclosingTree: Tree,
+      potentialParameters: List[Symbol],
+      ineviteableParameters: List[Symbol])
 
   case class RefactoringParameters(closureName: String, closureParameters: Symbol => Boolean)
 
@@ -22,12 +25,26 @@ abstract class ExtractClosure extends MultiStageRefactoring with TreeAnalysis wi
   }
 
   def prepare(s: Selection): Either[PreparationError, PreparationResult] = {
+    
+	def preparationSuccess(enclosingTree: Tree) = {
+	  val symbolsInEnclosingTree = enclosingTree.filter{
+	    case _: SymTree => true
+	    case _ => false
+	  }.map(_.symbol).distinct
+	  val selectedSymbols = inboundDependencies(s).distinct
+	  
+	  val (inevitableParams, potentialParams) = selectedSymbols.partition{ sym => symbolsInEnclosingTree.contains(sym) }
+	  
+	  Right(PreparationResult(enclosingTree, potentialParams, inevitableParams))
+	}
+	
     if (s.selectedTopLevelTrees.size > 0)
-      s.findSelectedWithPredicate {
+      s.findSelectedWithPredicate { // find a tree to insert the closure definition
+      	case b: Block if b == s.selectedTopLevelTrees.head => false
         case _: DefDef | _: Function | _: CaseDef | _: Block => true
         case _ => false
       } match {
-        case Some(t) => Right(PreparationResult(t, inboundDependencies(s).distinct))
+        case Some(t) => preparationSuccess(t)
         case None => Left(PreparationError("Can't extract closure from this position."))
       }
     else
@@ -35,7 +52,7 @@ abstract class ExtractClosure extends MultiStageRefactoring with TreeAnalysis wi
   }
 
   def perform(selection: Selection, preparation: PreparationResult, userInput: RefactoringParameters): Either[RefactoringError, List[Change]] = {
-    val params = preparation.potentialParameters.filter(userInput.closureParameters(_))
+    val params = preparation.potentialParameters.filter(userInput.closureParameters(_)) ::: preparation.ineviteableParameters
     val returns = outboundLocalDependencies(selection).distinct
 
     val returnStatement = if (returns.isEmpty) Nil else mkReturn(returns) :: Nil

@@ -31,7 +31,7 @@ class ExtractClosureTest extends util.TestRefactoring {
   }
 
   @Test
-  def prepareWithSelectedStatementInObject = prepare(
+  def prepareWithSelectedExpressionInObject = prepare(
     """
     package extractClosure
     object Demo {
@@ -43,7 +43,7 @@ class ExtractClosureTest extends util.TestRefactoring {
     """).assertFailure
 
   @Test
-  def prepareWithSelectedStatementInMethod = prepare(
+  def prepareWithSelectedExpressionInMethod = prepare(
     """
     package extractClosure
     object Demo {
@@ -56,7 +56,7 @@ class ExtractClosureTest extends util.TestRefactoring {
     """).assertSuccess
 
   @Test
-  def prepareBlock = prepare(
+  def prepareExpressions = prepare(
     """
     package extractClosure
     object Demo {
@@ -77,6 +77,19 @@ class ExtractClosureTest extends util.TestRefactoring {
       println(v.toString)
     }
     """).assertFailure
+
+  @Test
+  def prepareWithInevitableParameter = prepare(
+    """
+    package extractClosure
+    object Demo {
+      def a = {
+        for(i <- 1 to 10)/*(*/{
+          println(i)
+        }/*)*/
+	  }
+    }
+    """).assertSuccess
 
   @Test
   def extractSimpleExpression = new FileSet {
@@ -104,7 +117,7 @@ class ExtractClosureTest extends util.TestRefactoring {
   } applyRefactoring (extract("greet", Nil))
 
   @Test
-  def extractSimpleBlock = new FileSet {
+  def extractSimpleExpressions = new FileSet {
     """
     package extractClosure
     object Demo{
@@ -129,9 +142,65 @@ class ExtractClosureTest extends util.TestRefactoring {
     }
     """
   } applyRefactoring (extract("greet", Nil))
+  
+  @Test
+  def extractClosureWithInevitableParameter = new FileSet{
+    """
+    package extractClosure
+    object Demo{
+      def list(a: Int) = {
+        for(i <- 1 to 10)/*(*/{
+          println(i)
+        }/*)*/
+      }
+    }
+    """ becomes
+    """
+    package extractClosure
+    object Demo{
+      def list(a: Int) = {
+        def extracted(i: Int): Unit = {
+          println(i)
+        }
+        for(i <- 1 to 10){
+          extracted(i)
+        }
+      }
+    }
+    """
+  } applyRefactoring(extract("extracted", Nil))
+  
+  @Test
+  def extractBlock = new FileSet{
+    """
+    package extractClosure
+    object Demo{
+      def list(a: Int) = {
+        for(i <- 1 to 10)/*(*/{
+          println("block!")
+          println(i)
+        }/*)*/
+      }
+    }
+    """ becomes
+    """
+    package extractClosure
+    object Demo{
+      def list(a: Int) = {
+        def extracted(i: Int): Unit = {
+          println("block!")
+          println(i)
+        }
+        for(i <- 1 to 10){
+          extracted(i)
+        }
+      }
+    }
+    """
+  } applyRefactoring(extract("extracted", Nil))
 
   @Test
-  def extractBlockWith2OutboundDependencies = new FileSet {
+  def extractExpressionsWith2OutboundDependencies = new FileSet {
     """
     package extractClosure
     object Demo{
@@ -186,7 +255,7 @@ class ExtractClosureTest extends util.TestRefactoring {
   } applyRefactoring(extract("printRes", "a" :: "b" :: Nil))
 
   @Test
-  def extractBlockWith1ParamUsedTwice = new FileSet {
+  def extractExpressionsWith1ParamUsedTwice = new FileSet {
     """
     package extractClosure
     object Demo {
@@ -381,9 +450,7 @@ class ExtractClosureTest extends util.TestRefactoring {
     package extractClosure
     object Demo{
       def list(a: Int) = {
-        for(
-            i <- 1 to 10
-          ) yield /*(*/i * a/*)*/
+        for(i <- 1 to 10) yield /*(*/i * a/*)*/
       }
     }
     """ becomes
@@ -391,14 +458,10 @@ class ExtractClosureTest extends util.TestRefactoring {
     package extractClosure
     object Demo{
       def list(a: Int) = {
-        for(
-            i <- 1 to 10
-          ) yield {
-          def extracted(a: Int): Int = {
-            /*(*/i * a/*)*/
-          }
-          extracted(a)
+        def extracted(a: Int): Int = {
+          /*(*/i * a/*)*/
         }
+        for(i <- 1 to 10) yield extracted(a)
       }
     }
     """
