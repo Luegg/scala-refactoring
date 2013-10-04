@@ -13,7 +13,7 @@ abstract class ExtractClosure extends MultiStageRefactoring with TreeAnalysis wi
   case class PreparationResult(
       enclosingTree: Tree,
       potentialParameters: List[Symbol],
-      ineviteableParameters: List[Symbol])
+      inevitableParameters: List[Symbol])
 
   case class RefactoringParameters(closureName: String, closureParameters: Symbol => Boolean)
 
@@ -52,7 +52,7 @@ abstract class ExtractClosure extends MultiStageRefactoring with TreeAnalysis wi
   }
 
   def perform(selection: Selection, preparation: PreparationResult, userInput: RefactoringParameters): Either[RefactoringError, List[Change]] = {
-    val params = preparation.potentialParameters.filter(userInput.closureParameters(_)) ::: preparation.ineviteableParameters
+    val params = preparation.potentialParameters.filter(userInput.closureParameters(_)) ::: preparation.inevitableParameters
     val returns = outboundLocalDependencies(selection).distinct
 
     val returnStatement = if (returns.isEmpty) Nil else mkReturn(returns) :: Nil
