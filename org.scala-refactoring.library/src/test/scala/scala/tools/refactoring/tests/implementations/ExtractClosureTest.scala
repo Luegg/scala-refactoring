@@ -260,12 +260,11 @@ class ExtractClosureTest extends util.TestRefactoring {
       def printInfo = {
         println("nonsense")
         (1 to 9).foreach{
-          i => {
+          i => 
             def extracted: Unit = {
               /*(*/println(i)/*)*/
             }
             extracted
-          }
         }
       }
     }
