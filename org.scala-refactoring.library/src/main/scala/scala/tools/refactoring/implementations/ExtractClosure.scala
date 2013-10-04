@@ -56,11 +56,16 @@ abstract class ExtractClosure extends MultiStageRefactoring with TreeAnalysis wi
     val returns = outboundLocalDependencies(selection).distinct
 
     val returnStatement = if (returns.isEmpty) Nil else mkReturn(returns) :: Nil
+    val closureBody = selection.selectedTopLevelTrees match{
+      // a single block tree could be unpacked
+      case Block(stats, expr) :: Nil => stats ::: expr :: returnStatement
+      case stats => stats ::: returnStatement
+    }
     val closure = mkDefDef(
       NoMods,
       userInput.closureName,
       if (params.isEmpty) Nil else params :: Nil,
-      selection.selectedTopLevelTrees ::: returnStatement)
+      closureBody)
 
     val call = mkCallDefDef(userInput.closureName, params :: Nil, returns)
 
