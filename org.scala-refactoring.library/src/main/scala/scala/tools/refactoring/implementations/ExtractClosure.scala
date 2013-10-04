@@ -70,14 +70,14 @@ abstract class ExtractClosure extends MultiStageRefactoring with TreeAnalysis wi
         val (before, after) = stats.span { t =>
           t.pos.isRange && t.pos.end <= selection.pos.start
         }
-        t copy (stats = before ::: closure :: after)
+        t copy (stats = before ::: closure :: after) replaces t
       }
       case t @ DefDef(_, _, _, _, _, NoBlock(rhs)) =>
-        t copy (rhs = Block(closure :: Nil, rhs))
+        t copy (rhs = Block(closure :: Nil, rhs)) replaces t
       case t @ Function(_, body) =>
-        t copy (body = Block(closure :: Nil, body))
+        t copy (body = Block(closure :: Nil, body)) replaces t
       case t @ CaseDef(_, _, body) =>
-        t copy (body = Block(closure :: Nil, body))
+        t copy (body = Block(closure :: Nil, body)) replaces t
     }
 
     val extractClosure = topdown {
