@@ -92,15 +92,21 @@ trait Selections extends TreeTraverser with common.PimpedTrees {
      *
      * If multiple trees of the type are found, the last one (i.e. the deepest child) is returned.
      */
-    def findSelectedWithPredicate(predicate: Tree => Boolean): Option[Tree] = {
-
+    def findSelectedWithPredicate(predicate: Tree => Boolean): Option[Tree] = 
+      filterSelectedWithPredicate(predicate).lastOption
+    
+    /**
+     * Filters a selected tree by a predicate. The tree does not have to be selected completely,
+     * it is only checked whether this selection is contained in the tree.
+     */
+    def filterSelectedWithPredicate(predicate: Tree => Boolean): List[Tree] = {
       val filterer = new FilterTreeTraverser(cond(_) {
         case t => predicate(t) && isPosContainedIn(pos, t.pos)
       })
 
       filterer.traverse(root)
 
-      filterer.hits.lastOption
+      filterer.hits.toList
     }
 
     private[refactoring] lazy val allSelectedTrees: List[Tree] = {

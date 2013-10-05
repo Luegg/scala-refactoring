@@ -95,9 +95,7 @@ class ExtractClosureTest extends util.TestRefactoring {
     package extractClosure
     object Demo {
       def a = {
-        for(i <- 1 to 10)/*(*/{
-          println(i)
-        }/*)*/
+        ((i: Int) => /*(*/println(i)/*)*/)(1)
 	  }
     }
     """).assertSuccess
@@ -284,7 +282,7 @@ class ExtractClosureTest extends util.TestRefactoring {
         val osx = "MAC"
         def printOsIfEqual(osx: String): Unit = {
           /*(*/if(os.toUpperCase.indexOf(osx) != -1)
-          println("you're using Mac OsX");/*)*/
+          println("you're using " + osx);/*)*/
         }
     
         printOsIfEqual(osx)
