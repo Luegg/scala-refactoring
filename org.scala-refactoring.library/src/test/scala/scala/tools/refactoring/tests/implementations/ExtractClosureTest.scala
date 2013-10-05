@@ -35,6 +35,7 @@ class ExtractClosureTest extends util.TestRefactoring {
     """
     package extractClosure
     object Demo {
+      val os = "abc"
       val osx = "MAC"
       
       if(/*(*/os.toUpperCase.indexOf(osx) != -1/*)*/)
@@ -56,6 +57,7 @@ class ExtractClosureTest extends util.TestRefactoring {
     """
     package extractClosure
     object Demo {
+      val os = "abc"
       val osx = "MAC"
       
       def printOsInfo =
@@ -314,6 +316,26 @@ class ExtractClosureTest extends util.TestRefactoring {
         a + a
       }
     }
+    """
+  }.refactor(extract("extracted", Nil)).assertEqualTree
+  
+  @Test
+  def extractFromObject = new FileSet {
+    """
+    package extractClosure
+    object Demo{
+      if(/*(*/100 < 1000/*)*/)
+        println("Math not broken")
+	}
+    """ becomes """
+    package extractClosure
+    object Demo{
+      def extracted = {
+        /*(*/100 < 1000/*)*/
+      }
+      if(extracted)
+        println("Math not broken")
+	}
     """
   }.refactor(extract("extracted", Nil)).assertEqualTree
   

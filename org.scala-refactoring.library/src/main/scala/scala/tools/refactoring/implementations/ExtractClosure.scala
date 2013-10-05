@@ -28,7 +28,7 @@ abstract class ExtractClosure extends MultiStageRefactoring with TreeAnalysis wi
     
 	def preparationSuccess(enclosingTree: Tree) = {
 	  val symbolsInEnclosingTree = enclosingTree.filter{
-	    case _: SymTree => true
+	    case s: SymTree => true
 	    case _ => false
 	  }.map(_.symbol).distinct
 	  val selectedSymbols = inboundDependencies(s).distinct
@@ -38,10 +38,19 @@ abstract class ExtractClosure extends MultiStageRefactoring with TreeAnalysis wi
 	  Right(PreparationResult(enclosingTree, potentialParams, inevitableParams))
 	}
 	
-    if (s.selectedTopLevelTrees.size > 0)
+	val definesNonLocal = s.selectedSymbols.exists{ sym =>
+	  !sym.isLocal && (index.declaration(sym) match {
+	    case Some(t) => s.contains(t)
+	    case None => false
+	  })
+	}
+	
+	if(definesNonLocal)
+	  Left(PreparationError("Can't extract expression that defines non local fields"))
+	else if (s.selectedTopLevelTrees.size > 0)
       s.findSelectedWithPredicate { // find a tree to insert the closure definition
       	case b: Block if b == s.selectedTopLevelTrees.head => false
-        case _: DefDef | _: Function | _: CaseDef | _: Block => true
+        case _: DefDef | _: Function | _: CaseDef | _: Block | _: Template => true
         case _ => false
       } match {
         case Some(t) => preparationSuccess(t)
