@@ -387,7 +387,7 @@ class ExtractClosureTest extends util.TestRefactoring {
           /*(*/println(i)/*)*/
         }
         (1 to 9).foreach{
-          i => extracted
+          i => extracted(i)
         }
       }
     }

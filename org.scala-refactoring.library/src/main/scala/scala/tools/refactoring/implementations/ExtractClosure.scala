@@ -107,7 +107,7 @@ abstract class ExtractClosure extends MultiStageRefactoring with TreeAnalysis wi
         }
       }
 
-    val findEnclosingTree = predicate((t: Tree) => t == preparation.enclosingTree)
+    val findEnclosingTree = predicate { (t: Tree) => t == preparation.enclosingTree }
 
     val insertClosureDef = transform {
       case t @ Block(stats, expr) => {
@@ -130,7 +130,7 @@ abstract class ExtractClosure extends MultiStageRefactoring with TreeAnalysis wi
         findEnclosingTree &>
           {
             // first try to replace direct children
-            replaceBlockWithCall |> replaceExpressionWithCall |>
+            (if (extractSingleStatement) replaceExpressionWithCall else replaceBlockWithCall) |>
               // otherwise replace in subtrees
               topdown {
                 matchingChildren {
