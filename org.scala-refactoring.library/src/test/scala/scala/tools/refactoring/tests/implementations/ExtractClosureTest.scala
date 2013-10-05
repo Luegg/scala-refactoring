@@ -382,13 +382,12 @@ class ExtractClosureTest extends util.TestRefactoring {
     package extractClosure
     object Demo{
       def printInfo = {
-        println("nonsense")
+        println("nonsense") 
+        def extracted(i: Int): Unit = {
+          /*(*/println(i)/*)*/
+        }
         (1 to 9).foreach{
-          i => 
-            def extracted: Unit = {
-              /*(*/println(i)/*)*/
-            }
-            extracted
+          i => extracted
         }
       }
     }
@@ -408,11 +407,11 @@ class ExtractClosureTest extends util.TestRefactoring {
     """
     package extractClosure
     object Demo{
+      def out(a: Int): Unit = {
+        /*(*/println(a)/*)*/
+      }
       1 match{
         case a: Int => 
-          def out(a: Int): Unit = {
-            /*(*/println(a)/*)*/
-          }
           out(a)
       }
     }

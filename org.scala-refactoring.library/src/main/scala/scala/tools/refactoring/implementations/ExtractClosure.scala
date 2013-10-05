@@ -63,7 +63,7 @@ abstract class ExtractClosure extends MultiStageRefactoring with TreeAnalysis wi
     else if (s.selectedTopLevelTrees.size > 0)
       s.findSelectedWithPredicate { // find a tree to insert the closure definition
         case b: Block if b == s.selectedTopLevelTrees.head => false
-        case _: DefDef | _: Function | _: CaseDef | _: Block | _: Template => true
+        case _: DefDef | _: Block | _: Template => true
         case _ => false
       } match {
         case Some(t) => preparationSuccess(t)
@@ -123,10 +123,6 @@ abstract class ExtractClosure extends MultiStageRefactoring with TreeAnalysis wi
         t copy (body = before ::: closure :: after) replaces t
       case t @ DefDef(_, _, _, _, _, NoBlock(rhs)) =>
         t copy (rhs = Block(closure :: Nil, rhs)) replaces t
-      case t @ Function(_, body) =>
-        t copy (body = Block(closure :: Nil, body)) replaces t
-      case t @ CaseDef(_, _, body) =>
-        t copy (body = Block(closure :: Nil, body)) replaces t
     }
 
     val extractClosure = topdown {
