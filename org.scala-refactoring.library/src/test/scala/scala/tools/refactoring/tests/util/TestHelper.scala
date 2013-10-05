@@ -18,7 +18,7 @@ import org.junit.Before
 import scala.tools.refactoring.common.InteractiveScalaCompiler
 import scala.tools.refactoring.common.Selections
 
-import language.{postfixOps, implicitConversions}
+import language.{ postfixOps, implicitConversions }
 
 trait TestHelper extends ScalaVersionTestRule with Refactoring with CompilerProvider with common.InteractiveScalaCompiler {
 
@@ -49,7 +49,7 @@ trait TestHelper extends ScalaVersionTestRule with Refactoring with CompilerProv
       }
     }
 
-    def fileName(src: String) = name +"_"+ sources.indexOf(src).toString
+    def fileName(src: String) = name + "_" + sources.indexOf(src).toString
 
     lazy val sources = srcs.unzip._1 toList
 
@@ -58,6 +58,11 @@ trait TestHelper extends ScalaVersionTestRule with Refactoring with CompilerProv
     val NewFile = ""
 
     def applyRefactoring(createChanges: FileSet => List[Change]) {
+      val res = refactor(createChanges)
+      assert(res.res)
+    }
+
+    def refactor(createChanges: FileSet => List[Change]) = {
 
       val changes = try {
         global.ask { () =>
@@ -70,21 +75,32 @@ trait TestHelper extends ScalaVersionTestRule with Refactoring with CompilerProv
           throw e.getCause
       }
 
-      val res = sources zip (sources map fileName) flatMap {
-        case (NewFile, name) =>
-          changes collect {
-            case nfc: NewFileChange => nfc.text
+      new {
+        val res = sources zip (sources map fileName) flatMap {
+          case (NewFile, name) =>
+            changes collect {
+              case nfc: NewFileChange => nfc.text
+            }
+
+          case (src, name) =>
+            val textFileChanges = changes collect {
+              case tfc: TextChange if tfc.sourceFile.file.name == name => tfc
+            }
+            Change.applyChanges(textFileChanges, src) :: Nil
+
+        } filterNot (_.isEmpty)
+
+        def assertEqualTree = {
+          assertEquals(srcs.length, res.length)
+          val expected = srcs.unzip._2.toList
+          expected zip res foreach {p =>
+            val (expected, actual) = global.ask{ () =>
+              (treeFrom(p._1).toString, treeFrom(p._2).toString)
+            }
+            assertEquals(expected, actual)
           }
-
-        case (src, name) =>
-          val textFileChanges = changes collect {
-            case tfc: TextChange if tfc.sourceFile.file.name == name => tfc
-          }
-          Change.applyChanges(textFileChanges, src) :: Nil
-
-      } filterNot (_.isEmpty)
-
-      assert(res)
+        }
+      }
     }
 
     private def assert(res: List[String]) = {
@@ -108,16 +124,16 @@ trait TestHelper extends ScalaVersionTestRule with Refactoring with CompilerProv
   }
 
   val startPattern = "/*(*/"
-  val endPattern   = "/*)*/"
+  val endPattern = "/*)*/"
   val emptyPattern = "/*<-*/"
 
   def findMarkedNodes(r: Selections with InteractiveScalaCompiler)(src: String, tree: r.global.Tree): Option[r.Selection] = {
 
     val start = commentSelectionStart(src)
-    val end   = commentSelectionEnd(src)
+    val end = commentSelectionEnd(src)
     val emptySelection = src.indexOf(emptyPattern)
 
-    if(start >= 0 && end >= 0) {
+    if (start >= 0 && end >= 0) {
       Some(r.FileSelection(tree.pos.source.file, tree, start, end))
     } else if (emptySelection >= 0) {
       Some(r.FileSelection(tree.pos.source.file, tree, emptySelection, emptySelection))
@@ -127,7 +143,7 @@ trait TestHelper extends ScalaVersionTestRule with Refactoring with CompilerProv
   }
 
   def cleanTree(t: global.Tree) = {
-    global.ask{ () =>
+    global.ask { () =>
       val removeAuxiliaryTrees = ↓(transform {
 
         case t: global.Tree if (t.pos == global.NoPosition || t.pos.isRange) => t
