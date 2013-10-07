@@ -493,4 +493,28 @@ class ExtractClosureTest extends util.TestRefactoring {
     }
     """
   }.refactor(extract("extracted", Nil)).assertEqualTree
+  
+  @Test
+  def extractFromObjectUsingGlobalAsParameter = new FileSet{
+    """
+    package extractClosure
+    object Demo{
+      val a = 100
+	  if(/*(*/a > 10/*)*/)
+        println("> 10")
+    }
+    """ becomes
+    """
+    package extractClosure
+    object Demo{
+      private def extracted(a: => Int): Boolean = {
+        /*(*/a > 10/*)*/
+      }
+    
+      val a = 100
+	  if(extracted(a))
+        println("> 10")
+    }
+    """
+  }.refactor(extract("extracted", "a" :: Nil)).assertEqualCode
 }

@@ -40,7 +40,7 @@ trait TreeAnalysis {
     for {
       selected <- selection.selectedSymbols
       declaration <- index.declaration(selected)
-      if !selection.contains(declaration) && selected.pos.isOpaqueRange
+      if !selection.contains(declaration)
     } yield selected
   }
 
