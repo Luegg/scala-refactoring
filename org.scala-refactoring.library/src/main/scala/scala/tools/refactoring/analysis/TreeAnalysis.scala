@@ -33,6 +33,18 @@ trait TreeAnalysis {
   }
 
   /**
+   * Returns a list of all symbols that are used inside but declared
+   * outside the selection.
+   */
+  def inboundDependencies(selection: Selection): List[global.Symbol] = {
+    for {
+      selected <- selection.selectedSymbols
+      declaration <- index.declaration(selected)
+      if !selection.contains(declaration) && selected.pos.isOpaqueRange
+    } yield selected
+  }
+
+  /**
    * From the selection and in the scope of the currentOwner, returns
    * a list of all symbols that are defined inside the selection and
    * used outside of it.

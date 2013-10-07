@@ -17,13 +17,6 @@ abstract class ExtractClosure extends MultiStageRefactoring with TreeAnalysis wi
 
   case class RefactoringParameters(closureName: String, closureParameters: Symbol => Boolean)
 
-  def inboundDependencies(selection: Selection): List[Symbol] = {
-    for (
-      selected <- selection.selectedSymbols;
-      declaration <- index.declaration(selected) if !selection.contains(declaration) && selected.pos.isOpaqueRange
-    ) yield selected
-  }
-
   def prepare(selection: Selection): Either[PreparationError, PreparationResult] = {
 
     def preparationSuccess(enclosingTree: Tree) = {
