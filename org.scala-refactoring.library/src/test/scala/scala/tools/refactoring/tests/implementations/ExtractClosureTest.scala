@@ -444,16 +444,15 @@ class ExtractClosureTest extends util.TestRefactoring {
     """
   }.refactor(extract("extracted", "a" :: Nil)).assertEqualTree
   
-  @Ignore("Code gen messes up transformation results")
   @Test
   def extractFromForEnumerator = new FileSet{
     """
     package extractClosure
     object Demo{
       def list(a: Int) = {
-        for(
-            i <- /*(*/a :: Nil/*)*/
-          ) yield i
+        for {
+          i <- /*(*/1 to a/*)*/
+        } yield i
       }
     }
     """ becomes
@@ -461,12 +460,12 @@ class ExtractClosureTest extends util.TestRefactoring {
     package extractClosure
     object Demo{
       def list(a: Int) = {
-        def extracted(a: Int): List[Int] = {
-          /*(*/a :: Nil/*)*/
+        def extracted(a: Int): scala.collection.immutable.Range.Inclusive = {
+          /*(*/1 to a/*)*/
         }
-        for(
-            i <- extracted(a)
-          ) yield i
+        for {
+          i <- extracted(a)
+        } yield i
       }
     }
     """
