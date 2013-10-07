@@ -100,6 +100,10 @@ trait TestHelper extends ScalaVersionTestRule with Refactoring with CompilerProv
             assertEquals(expected, actual)
           }
         }
+        
+        def assertEqualCode = {
+          assert(res)
+        }
       }
     }
 

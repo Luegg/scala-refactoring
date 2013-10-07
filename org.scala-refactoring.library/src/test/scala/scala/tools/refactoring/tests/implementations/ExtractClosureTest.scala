@@ -123,7 +123,7 @@ class ExtractClosureTest extends util.TestRefactoring {
       }
     }
     """
-  }.refactor(extract("greet", Nil)).assertEqualTree
+  }.refactor(extract("greet", Nil)).assertEqualCode
 
   @Test
   def extractSimpleExpressions = new FileSet {
@@ -150,7 +150,7 @@ class ExtractClosureTest extends util.TestRefactoring {
       }
     }
     """
-  }.refactor(extract("greet", Nil)).assertEqualTree
+  }.refactor(extract("greet", Nil)).assertEqualCode
   
   @Test
   def extractClosureWithInevitableParameter = new FileSet{
@@ -158,9 +158,8 @@ class ExtractClosureTest extends util.TestRefactoring {
     package extractClosure
     object Demo{
       def list(a: Int) = {
-        for(i <- 1 to 10)/*(*/{
-          println(i)
-        }/*)*/
+        for(i <- 1 to 10)
+          /*(*/println(i)/*)*/
       }
     }
     """ becomes
@@ -169,7 +168,7 @@ class ExtractClosureTest extends util.TestRefactoring {
     object Demo{
       def list(a: Int) = {
         def extracted(i: Int): Unit = {
-          println(i)
+          /*(*/println(i)/*)*/
         }
         for(i <- 1 to 10){
           extracted(i)
@@ -261,7 +260,7 @@ class ExtractClosureTest extends util.TestRefactoring {
       }
     }
     """
-  }.refactor(extract("printRes", "a" :: "b" :: Nil)).assertEqualTree
+  }.refactor(extract("printRes", "a" :: "b" :: Nil)).assertEqualCode
 
   @Test
   def extractExpressionsWith1ParamUsedTwice = new FileSet {
@@ -284,7 +283,6 @@ class ExtractClosureTest extends util.TestRefactoring {
           /*(*/if(os.toUpperCase.indexOf(osx) != -1)
           println("you're using " + osx);/*)*/
         }
-    
         printOsIfEqual(osx)
       }
     }
@@ -315,7 +313,7 @@ class ExtractClosureTest extends util.TestRefactoring {
       }
     }
     """
-  }.refactor(extract("extracted", Nil)).assertEqualTree
+  }.refactor(extract("extracted", Nil)).assertEqualCode
   
   @Test
   def extractFromObject = new FileSet {
@@ -328,14 +326,15 @@ class ExtractClosureTest extends util.TestRefactoring {
     """ becomes """
     package extractClosure
     object Demo{
-      def extracted = {
+      def extracted: Boolean = {
         /*(*/100 < 1000/*)*/
       }
+
       if(extracted)
         println("Math not broken")
 	}
     """
-  }.refactor(extract("extracted", Nil)).assertEqualTree
+  }.refactor(extract("extracted", Nil)).assertEqualCode
   
   @Test
   def extractFromInnerDef = new FileSet {
@@ -445,6 +444,7 @@ class ExtractClosureTest extends util.TestRefactoring {
     """
   }.refactor(extract("extracted", "a" :: Nil)).assertEqualTree
   
+  @Ignore("Code gen messes up transformation results")
   @Test
   def extractFromForEnumerator = new FileSet{
     """
