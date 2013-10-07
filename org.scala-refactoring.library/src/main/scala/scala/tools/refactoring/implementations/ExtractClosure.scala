@@ -11,15 +11,22 @@ abstract class ExtractClosure extends MultiStageRefactoring with TreeAnalysis wi
   import global._
 
   case class PreparationResult(
+    /** tree to insert the new closure definition */
     enclosingTree: Tree,
-    potentialParameters: List[Symbol],
-    inevitableParameters: List[Symbol])
+    /** optional parameters of the closure */
+    optionalParameters: List[Symbol],
+    /** required parameters of the closure */
+    requiredParameters: List[Symbol])
 
-  case class RefactoringParameters(closureName: String, closureParameters: Symbol => Boolean)
+  case class RefactoringParameters(
+      /** name of the closure function */
+      closureName: String,
+      /** defines for each optional parameter if it's used as a closure parameter */
+      closureParameters: Symbol => Boolean)
 
   def prepare(selection: Selection): Either[PreparationError, PreparationResult] = {
 
-    def preparationSuccess(enclosingTree: Tree) = {
+    def mkPreparationResult(enclosingTree: Tree) = {
       val childContainingSelection = enclosingTree.filter { t =>
         t != enclosingTree &&
           t.pos.isRange && t.pos.start < selection.pos.start &&
@@ -32,11 +39,11 @@ abstract class ExtractClosure extends MultiStageRefactoring with TreeAnalysis wi
         case _ => false
       }.map(_.symbol)
 
-      val (inevitableParams, potentialParams) = deps.partition { sym =>
+      val (requiredParams, optionalParams) = deps.partition { sym =>
         newSymbolsBetweenEnclosingAndSelection.contains(sym)
       }
 
-      Right(PreparationResult(enclosingTree, potentialParams, inevitableParams))
+      Right(PreparationResult(enclosingTree, optionalParams, requiredParams))
     }
 
     val definesNonLocal = selection.selectedSymbols.exists { sym =>
@@ -50,13 +57,13 @@ abstract class ExtractClosure extends MultiStageRefactoring with TreeAnalysis wi
         case b: Block if b == selection.selectedTopLevelTrees.head => false
         case _: DefDef | _: Block | _: Template => true
         case _ => false
-      }.map(preparationSuccess(_)).getOrElse(Left(PreparationError("Can't extract closure from this position.")))
+      }.map(mkPreparationResult(_)).getOrElse(Left(PreparationError("Can't extract closure from this position.")))
     else
       Left(PreparationError("No expression or statement selected."))
   }
 
   def perform(selection: Selection, preparation: PreparationResult, userInput: RefactoringParameters): Either[RefactoringError, List[Change]] = {
-    val params = preparation.potentialParameters.filter(userInput.closureParameters(_)) ::: preparation.inevitableParameters
+    val params = preparation.optionalParameters.filter(userInput.closureParameters(_)) ::: preparation.requiredParameters
     val returns = outboundLocalDependencies(selection).distinct
 
     val returnStatement = if (returns.isEmpty) Nil else mkReturn(returns) :: Nil
