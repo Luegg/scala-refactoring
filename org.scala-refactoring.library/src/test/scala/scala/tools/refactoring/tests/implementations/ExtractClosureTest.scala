@@ -326,7 +326,7 @@ class ExtractClosureTest extends util.TestRefactoring {
     """ becomes """
     package extractClosure
     object Demo{
-      def extracted: Boolean = {
+      private def extracted: Boolean = {
         /*(*/100 < 1000/*)*/
       }
 
@@ -406,7 +406,7 @@ class ExtractClosureTest extends util.TestRefactoring {
     """
     package extractClosure
     object Demo{
-      def out(a: Int): Unit = {
+      private def out(a: Int): Unit = {
         /*(*/println(a)/*)*/
       }
       1 match{

@@ -58,8 +58,7 @@ trait TestHelper extends ScalaVersionTestRule with Refactoring with CompilerProv
     val NewFile = ""
 
     def applyRefactoring(createChanges: FileSet => List[Change]) {
-      val res = refactor(createChanges)
-      assert(res.res)
+      refactor(createChanges).assertEqualCode
     }
 
     def refactor(createChanges: FileSet => List[Change]) = {

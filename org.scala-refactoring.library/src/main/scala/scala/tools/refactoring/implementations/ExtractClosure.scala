@@ -19,10 +19,10 @@ abstract class ExtractClosure extends MultiStageRefactoring with TreeAnalysis wi
     requiredParameters: List[Symbol])
 
   case class RefactoringParameters(
-      /** name of the closure function */
-      closureName: String,
-      /** defines for each optional parameter if it's used as a closure parameter */
-      closureParameters: Symbol => Boolean)
+    /** name of the closure function */
+    closureName: String,
+    /** defines for each optional parameter if it's used as a closure parameter */
+    closureParameters: Symbol => Boolean)
 
   def prepare(selection: Selection): Either[PreparationError, PreparationResult] = {
 
@@ -63,32 +63,39 @@ abstract class ExtractClosure extends MultiStageRefactoring with TreeAnalysis wi
   }
 
   def perform(selection: Selection, preparation: PreparationResult, userInput: RefactoringParameters): Either[RefactoringError, List[Change]] = {
-    val params = preparation.optionalParameters.filter(userInput.closureParameters(_)) ::: preparation.requiredParameters
+    val params = inboundDependencies(selection).distinct.filter{ dep =>
+      preparation.requiredParameters.contains(dep) ||
+        preparation.optionalParameters.filter(userInput.closureParameters(_)).contains(dep)
+    }
     val returns = outboundLocalDependencies(selection).distinct
 
-    val returnStatement = if (returns.isEmpty) Nil else mkReturn(returns) :: Nil
-    val closureBody = selection.selectedTopLevelTrees match {
-      // a single block tree could be unpacked
-      case Block(stats, expr) :: Nil => stats ::: expr :: returnStatement
-      case stats => stats ::: returnStatement
+    val closure = {
+      val returnStatement = if (returns.isEmpty) Nil else mkReturn(returns) :: Nil
+      val closureBody = selection.selectedTopLevelTrees match {
+        // a single block tree could be unpacked
+        case Block(stats, expr) :: Nil => stats ::: expr :: returnStatement
+        case stats => stats ::: returnStatement
+      }
+      val mods = preparation.enclosingTree match {
+        case _: Template => NoMods withPosition (Flags.PRIVATE, NoPosition)
+        case _ => NoMods
+      }
+
+      mkDefDef(
+        mods,
+        userInput.closureName,
+        if (params.isEmpty) Nil else params :: Nil,
+        closureBody)
     }
-    val closure = mkDefDef(
-      NoMods,
-      userInput.closureName,
-      if (params.isEmpty) Nil else params :: Nil,
-      closureBody)
 
     val call = mkCallDefDef(userInput.closureName, params :: Nil, returns)
 
     val extractSingleStatement = selection.selectedTopLevelTrees.size == 1
 
     val replaceExpressionWithCall =
-      if (extractSingleStatement)
-        replaceTree(selection.selectedTopLevelTrees.head, call)
-      else
-        fail[Tree]
+      replaceTree(selection.selectedTopLevelTrees.head, call)
 
-    val replaceBlockWithCall =
+    val replaceSequenceWithCall =
       transform {
         case block @ BlockExtractor(stats) if stats.size > 0 => {
           val newStats = stats.replaceSequence(selection.selectedTopLevelTrees, call :: Nil)
@@ -119,7 +126,7 @@ abstract class ExtractClosure extends MultiStageRefactoring with TreeAnalysis wi
         findEnclosingTree &>
           {
             // first try to replace direct children
-            (if (extractSingleStatement) replaceExpressionWithCall else replaceBlockWithCall) |>
+            (if (extractSingleStatement) replaceExpressionWithCall else replaceSequenceWithCall) |>
               // otherwise replace in subtrees
               topdown {
                 matchingChildren {
