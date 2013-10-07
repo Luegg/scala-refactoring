@@ -6,7 +6,6 @@ import common.CompilerAccess
 import scala.tools.refactoring.analysis.TreeAnalysis
 import scala.tools.refactoring.analysis.Indexes
 import scala.reflect.internal.Flags
-import PartialFunction._
 
 abstract class ExtractClosure extends MultiStageRefactoring with TreeAnalysis with Indexes with CompilerAccess {
   import global._
@@ -25,50 +24,40 @@ abstract class ExtractClosure extends MultiStageRefactoring with TreeAnalysis wi
     ) yield selected
   }
 
-  def prepare(s: Selection): Either[PreparationError, PreparationResult] = {
-
-    def findChildContainingSelection(enclosingTree: Tree) = {
-      val filterer = new FilterTreeTraverser(cond(_) {
-        case t if t != enclosingTree =>
-          t.pos.isRange && t.pos.start < s.pos.start && t.exists(p => p == s.allSelectedTrees.head)
-      })
-      filterer.traverse(enclosingTree)
-      filterer.hits.headOption
-    }
+  def prepare(selection: Selection): Either[PreparationError, PreparationResult] = {
 
     def preparationSuccess(enclosingTree: Tree) = {
-      val deps = inboundDependencies(s).distinct
-      val newSymbolsBetweenEnclosingAndSelection = findChildContainingSelection(enclosingTree) match {
-        case Some(t) => t.filter {
-          case t: DefTree => !s.contains(t)
-          case _ => false
-        }.map(_.symbol)
-        case None => List()
-      }
+      val childContainingSelection = enclosingTree.filter { t =>
+        t != enclosingTree &&
+          t.pos.isRange && t.pos.start < selection.pos.start &&
+          t.exists(p => p == selection.allSelectedTrees.head)
+      }.headOption.getOrElse(EmptyTree)
 
-      val (inevitableParams, potentialParams) = deps.partition { sym => newSymbolsBetweenEnclosingAndSelection.contains(sym) }
+      val deps = inboundDependencies(selection).distinct
+      val newSymbolsBetweenEnclosingAndSelection = childContainingSelection.filter {
+        case t: DefTree => !selection.contains(t)
+        case _ => false
+      }.map(_.symbol)
+
+      val (inevitableParams, potentialParams) = deps.partition { sym =>
+        newSymbolsBetweenEnclosingAndSelection.contains(sym)
+      }
 
       Right(PreparationResult(enclosingTree, potentialParams, inevitableParams))
     }
 
-    val definesNonLocal = s.selectedSymbols.exists { sym =>
-      !sym.isLocal && (index.declaration(sym) match {
-        case Some(t) => s.contains(t)
-        case None => false
-      })
+    val definesNonLocal = selection.selectedSymbols.exists { sym =>
+      !sym.isLocal && index.declaration(sym).exists(selection.contains(_))
     }
 
     if (definesNonLocal)
-      Left(PreparationError("Can't extract expression that defines non local fields"))
-    else if (s.selectedTopLevelTrees.size > 0)
-      s.findSelectedWithPredicate { // find a tree to insert the closure definition
-        case b: Block if b == s.selectedTopLevelTrees.head => false
+      Left(PreparationError("Can't extract expressions that defines non local fields"))
+    else if (selection.selectedTopLevelTrees.size > 0)
+      selection.findSelectedWithPredicate { // find a tree to insert the closure definition
+        case b: Block if b == selection.selectedTopLevelTrees.head => false
         case _: DefDef | _: Block | _: Template => true
         case _ => false
-      } match {
-        case Some(t) => preparationSuccess(t)
-        case None => Left(PreparationError("Can't extract closure from this position."))
-      }
+      }.map(preparationSuccess(_)).getOrElse(Left(PreparationError("Can't extract closure from this position.")))
     else
       Left(PreparationError("No expression or statement selected."))
   }
