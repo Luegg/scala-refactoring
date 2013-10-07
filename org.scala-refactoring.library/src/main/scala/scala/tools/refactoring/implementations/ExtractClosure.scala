@@ -63,7 +63,7 @@ abstract class ExtractClosure extends MultiStageRefactoring with TreeAnalysis wi
   }
 
   def perform(selection: Selection, preparation: PreparationResult, userInput: RefactoringParameters): Either[RefactoringError, List[Change]] = {
-    val params = inboundDependencies(selection).distinct.filter{ dep =>
+    val params = inboundDependencies(selection).distinct.filter { dep =>
       preparation.requiredParameters.contains(dep) ||
         preparation.optionalParameters.filter(userInput.closureParameters(_)).contains(dep)
     }
@@ -105,18 +105,18 @@ abstract class ExtractClosure extends MultiStageRefactoring with TreeAnalysis wi
 
     val findEnclosingTree = predicate { (t: Tree) => t == preparation.enclosingTree }
 
-    val insertClosureDef = transform {
-      case t @ Block(stats, expr) => {
-        val (before, after) = stats.span { t =>
-          t.pos.isRange && t.pos.end <= selection.pos.start
-        }
-        t copy (stats = before ::: closure :: after) replaces t
+    def insertClosureInSequence(statements: List[Tree]) = {
+      val (before, after) = statements.span { t =>
+        t.pos.isRange && t.pos.end <= selection.pos.start
       }
+      before ::: closure :: after
+    }
+
+    val insertClosureDef = transform {
+      case t @ Block(stats, expr) =>
+        t copy (stats = insertClosureInSequence(stats)) replaces t
       case t @ Template(_, _, body) =>
-        val (before, after) = body.span { t =>
-          t.pos.isRange && t.pos.end <= selection.pos.start
-        }
-        t copy (body = before ::: closure :: after) replaces t
+        t copy (body = insertClosureInSequence(body)) replaces t
       case t @ DefDef(_, _, _, _, _, NoBlock(rhs)) =>
         t copy (rhs = Block(closure :: Nil, rhs)) replaces t
     }
