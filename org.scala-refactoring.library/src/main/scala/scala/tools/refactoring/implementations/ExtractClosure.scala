@@ -109,7 +109,10 @@ abstract class ExtractClosure extends MultiStageRefactoring with TreeAnalysis wi
       val (before, after) = statements.span { t =>
         t.pos.isRange && t.pos.end <= selection.pos.start
       }
-      before ::: closure :: after
+      if (before.length == 0)
+        closure :: after
+      else
+        before ::: PlainText.BlankLine :: closure :: after
     }
 
     val insertClosureDef = transform {

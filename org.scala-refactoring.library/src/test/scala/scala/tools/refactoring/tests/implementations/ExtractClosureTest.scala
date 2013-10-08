@@ -116,6 +116,7 @@ class ExtractClosureTest extends util.TestRefactoring {
     object Demo{
       def printInfo = {
         println("nonsense")
+
         def greet: Unit = {
           /*(*/println("hi")/*)*/
         }
@@ -142,6 +143,7 @@ class ExtractClosureTest extends util.TestRefactoring {
     object Demo{
       def printInfo = {
         println("nonsense")
+
         def greet: Unit = {
           /*(*/println("hello")
           println("world")/*)*/
@@ -253,6 +255,7 @@ class ExtractClosureTest extends util.TestRefactoring {
     object Demo {
       def calc = {
         val (a, b, c) = (1, 2, 3)
+
         def printRes(a: Int, b: Int): Unit = {
           /*(*/println(a + b + c)/*)*/
         }
@@ -510,7 +513,7 @@ class ExtractClosureTest extends util.TestRefactoring {
       private def extracted(a: => Int): Boolean = {
         /*(*/a > 10/*)*/
       }
-    
+
       val a = 100
 	  if(extracted(a))
         println("> 10")
