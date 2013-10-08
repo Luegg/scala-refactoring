@@ -166,18 +166,16 @@ abstract class ExtractClosure extends MultiStageRefactoring with TreeAnalysis wi
     defOccurrences :: refOccurrences
   }
 
-  def getClosureNameOccurences(refactoredCode: Selection, userInput: RefactoringParameters): List[(Int, Int)] = {
+  def closureNameOccurrences(refactoredCode: Selection, userInput: RefactoringParameters): List[(Int, Int)] =
     findDefDefByName(refactoredCode, userInput.closureName) match {
       case Some(d: DefDef) => allOccurrences(d)
       case _ => Nil
     }
-  }
 
-  def getClosureParamsOccurences(refactoredCode: Selection, userInput: RefactoringParameters): List[List[(Int, Int)]] = {
+  def parameterOccurrences(refactoredCode: Selection, userInput: RefactoringParameters): List[List[(Int, Int)]] =
     findDefDefByName(refactoredCode, userInput.closureName) match {
       case Some(DefDef(_, _, _, params, _, _)) =>
         params.flatten.map { p => allOccurrences(p) }
       case _ => Nil
     }
-  }
 }

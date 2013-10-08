@@ -530,7 +530,7 @@ class ExtractClosureTest extends util.TestRefactoring {
       val params = refactoring.RefactoringParameters(closureName, _ => true)
     }
     val sel = selection(r.refactoring, fs)
-    r.refactoring.getClosureNameOccurences(sel, r.params)
+    r.refactoring.closureNameOccurrences(sel, r.params)
   }
 
   @Test
@@ -573,7 +573,7 @@ class ExtractClosureTest extends util.TestRefactoring {
       val params = refactoring.RefactoringParameters(closureName, _ => true)
     }
     val sel = selection(r.refactoring, fs)
-    r.refactoring.getClosureParamsOccurences(sel, r.params)
+    r.refactoring.parameterOccurrences(sel, r.params)
   }
 
   @Test
