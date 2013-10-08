@@ -537,6 +537,21 @@ class ExtractClosureTest extends util.TestRefactoring {
   def nameOccurrences = {
     val nameOccurrences = nameOccurrencesIn("""
     object Demo{
+      def list(a: Int) = {
+        /*(*/def nt(i: Int): Int = {
+          i * a
+        }
+        for(i <- 1 to 10) yield nt(i)/*)*/
+      }
+    }
+    """, "nt")
+    assertEquals(List((62, 2), (140, 2)), nameOccurrences)
+  }
+
+  @Test
+  def nameOccurrencesInObject = {
+    val nameOccurrences = nameOccurrencesIn("""
+    object Demo{
       /*(*/private def ef(a: => Int): Boolean = {
         a > 10
       }
