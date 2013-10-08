@@ -144,13 +144,10 @@ abstract class ExtractClosure extends MultiStageRefactoring with TreeAnalysis wi
     Right(transformFile(selection.file, extractClosure))
   }
 
-  private def treeEnclosingSelection(selection: ExtractClosure.this.Selection): Option[ExtractClosure.this.global.Tree] = {
-    selection.findSelectedWithPredicate { t =>
+  private def defDefWithName(selection: Selection, closureName: String): Option[Tree] = {
+    val enclosingTree = selection.findSelectedWithPredicate { t =>
       t.pos.isRange && t.pos.start < selection.pos.start && t.pos.end > selection.pos.end
     }
-  }
-
-  private def defDefWithName(closureName: String, enclosingTree: Option[Tree]): Option[Tree] = {
     enclosingTree.getOrElse(EmptyTree).find {
       case d @ DefDef(_, name, _, _, _, _) =>
         name.decode == closureName
@@ -158,37 +155,28 @@ abstract class ExtractClosure extends MultiStageRefactoring with TreeAnalysis wi
     }
   }
 
-  private def occurrence(p: Position) =
-    (p.start, p.end - p.start)
+  private def allOccurrences(t: DefTree) = {
+    def toOccurrence(p: Position) =
+      (p.start, p.end - p.start)
 
-  def getClosureNameOccurences(refactoredSelection: Selection, userInput: RefactoringParameters): List[(Int, Int)] = {
-    val enclosingTree = treeEnclosingSelection(refactoredSelection)
-    val closureDefDef = defDefWithName(userInput.closureName, enclosingTree)
+    val defOccurrences = toOccurrence(t.namePosition())
+    val refOccurrences = index.references(t.symbol).map {
+      ref => toOccurrence(ref.pos)
+    }
+    defOccurrences :: refOccurrences
+  }
 
-    closureDefDef match {
-      case Some(d) =>
-        val defOccurrences = occurrence(d.namePosition())
-        val refOccurrences = index.references(d.symbol).map {
-          ref => occurrence(ref.pos)
-        }
-        defOccurrences :: refOccurrences
-      case None => Nil
+  def getClosureNameOccurences(refactoredCode: Selection, userInput: RefactoringParameters): List[(Int, Int)] = {
+    defDefWithName(refactoredCode, userInput.closureName) match {
+      case Some(d: DefDef) => allOccurrences(d)
+      case _ => Nil
     }
   }
 
-  def getClosureParamsOccurences(refactoredSelection: Selection, userInput: RefactoringParameters): List[List[(Int, Int)]] = {
-    val enclosingTree = treeEnclosingSelection(refactoredSelection)
-    val closureDefDef = defDefWithName(userInput.closureName, enclosingTree)
-
-    closureDefDef match {
+  def getClosureParamsOccurences(refactoredCode: Selection, userInput: RefactoringParameters): List[List[(Int, Int)]] = {
+    defDefWithName(refactoredCode, userInput.closureName) match {
       case Some(DefDef(_, _, _, params, _, _)) =>
-        params.flatten.map { p =>
-          val pOccurrence = occurrence(p.namePosition())
-          val refOccurrences = index.references(p.symbol).map {
-            ref => occurrence(ref.pos)
-          }
-          pOccurrence :: refOccurrences
-        }
+        params.flatten.map { p => allOccurrences(p) }
       case _ => Nil
     }
   }
