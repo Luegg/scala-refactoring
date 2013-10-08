@@ -144,28 +144,52 @@ abstract class ExtractClosure extends MultiStageRefactoring with TreeAnalysis wi
     Right(transformFile(selection.file, extractClosure))
   }
 
-  def getClosureNameOccurences(refactoredSelection: Selection, userInput: RefactoringParameters): List[(Int, Int)] = {
-    val enclosingTree = refactoredSelection.findSelectedWithPredicate { t =>
-      t.pos.isRange && t.pos.start < refactoredSelection.pos.start && t.pos.end > refactoredSelection.pos.end
+  private def treeEnclosingSelection(selection: ExtractClosure.this.Selection): Option[ExtractClosure.this.global.Tree] = {
+    selection.findSelectedWithPredicate { t =>
+      t.pos.isRange && t.pos.start < selection.pos.start && t.pos.end > selection.pos.end
     }
+  }
 
-    val closureDefDef = enclosingTree.getOrElse(EmptyTree).find {
+  private def defDefWithName(closureName: String, enclosingTree: Option[Tree]): Option[Tree] = {
+    enclosingTree.getOrElse(EmptyTree).find {
       case d @ DefDef(_, name, _, _, _, _) =>
-        name.decode == userInput.closureName
+        name.decode == closureName
       case _ => false
     }
-    
-    def occurrence(p: Position) =
-      (p.start, p.end - p.start)
+  }
+
+  private def occurrence(p: Position) =
+    (p.start, p.end - p.start)
+
+  def getClosureNameOccurences(refactoredSelection: Selection, userInput: RefactoringParameters): List[(Int, Int)] = {
+    val enclosingTree = treeEnclosingSelection(refactoredSelection)
+    val closureDefDef = defDefWithName(userInput.closureName, enclosingTree)
 
     closureDefDef match {
       case Some(d) =>
         val defOccurrences = occurrence(d.namePosition())
-        val refOccurrences = index.references(d.symbol).map{
+        val refOccurrences = index.references(d.symbol).map {
           ref => occurrence(ref.pos)
         }
         defOccurrences :: refOccurrences
       case None => Nil
+    }
+  }
+
+  def getClosureParamsOccurences(refactoredSelection: Selection, userInput: RefactoringParameters): List[List[(Int, Int)]] = {
+    val enclosingTree = treeEnclosingSelection(refactoredSelection)
+    val closureDefDef = defDefWithName(userInput.closureName, enclosingTree)
+
+    closureDefDef match {
+      case Some(DefDef(_, _, _, params, _, _)) =>
+        params.flatten.map { p =>
+          val pOccurrence = occurrence(p.namePosition())
+          val refOccurrences = index.references(p.symbol).map {
+            ref => occurrence(ref.pos)
+          }
+          pOccurrence :: refOccurrences
+        }
+      case _ => Nil
     }
   }
 }

@@ -563,4 +563,31 @@ class ExtractClosureTest extends util.TestRefactoring {
     """, "ef")
     assertEquals(List((41, 2), (116, 2)), nameOccurrences)
   }
+
+  def paramOccurrencesIn(code: String, closureName: String) = {
+    val fs = new FileSet {
+      code becomes ""
+    }
+    val r = new TestRefactoringImpl(fs) {
+      val refactoring = new ExtractClosure with SilentTracing with TestProjectIndex
+      val params = refactoring.RefactoringParameters(closureName, _ => true)
+    }
+    val sel = selection(r.refactoring, fs)
+    r.refactoring.getClosureParamsOccurences(sel, r.params)
+  }
+
+  @Test
+  def paramOccurrences = {
+    val paramOccurrences = paramOccurrencesIn("""
+    object Demo{
+      def list(a: Int) = {
+        /*(*/def extracted(ex: Int): Int = {
+          ex * a * ex
+        }
+        for(ex <- 1 to 10) yield extracted(ex)/*)*/
+      }
+    }
+    """, "extracted")
+    assertEquals(List(List((72, 2), (100, 2), (109, 2))), paramOccurrences)
+  }
 }
