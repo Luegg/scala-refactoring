@@ -143,4 +143,33 @@ abstract class ExtractClosure extends MultiStageRefactoring with TreeAnalysis wi
 
     Right(transformFile(selection.file, extractClosure))
   }
+
+  def getClosureNameOccurences(refactoredSelection: Selection, userInput: RefactoringParameters): List[(Int, Int)] = {
+    val content = compilationUnitOfFile(refactoredSelection.file).get.source.content.toList
+    
+    val enclosingTree = refactoredSelection.findSelectedWithPredicate { t =>
+      //refactoredSelection.selectedTopLevelTrees.forall(t.children.contains(_))
+      t.pos.isRange && t.pos.start < refactoredSelection.pos.start && t.pos.end > refactoredSelection.pos.end
+    }
+
+    val closureDefDef = enclosingTree.getOrElse(EmptyTree).find {
+      case d @ DefDef(_, name, _, _, _, _) =>
+        name.decode == userInput.closureName
+      case _ => false
+    }
+    
+    def occurrence(p: Position) =
+      (p.start, p.end - p.start)
+
+    closureDefDef match {
+      case Some(d) =>
+        val defOccurrences = occurrence(d.namePosition())
+        val refOccurrences = index.references(d.symbol).map{
+          ref => 
+            occurrence(ref.pos)
+        }
+        defOccurrences :: refOccurrences
+      case None => Nil
+    }
+  }
 }

@@ -153,9 +153,9 @@ class ExtractClosureTest extends util.TestRefactoring {
     }
     """
   }.refactor(extract("greet", Nil)).assertEqualCode
-  
+
   @Test
-  def extractClosureWithInevitableParameter = new FileSet{
+  def extractClosureWithInevitableParameter = new FileSet {
     """
     package extractClosure
     object Demo{
@@ -165,7 +165,7 @@ class ExtractClosureTest extends util.TestRefactoring {
       }
     }
     """ becomes
-    """
+      """
     package extractClosure
     object Demo{
       def list(a: Int) = {
@@ -179,9 +179,9 @@ class ExtractClosureTest extends util.TestRefactoring {
     }
     """
   }.refactor(extract("extracted", Nil)).assertEqualTree
-  
+
   @Test
-  def extractBlock = new FileSet{
+  def extractBlock = new FileSet {
     """
     package extractClosure
     object Demo{
@@ -193,7 +193,7 @@ class ExtractClosureTest extends util.TestRefactoring {
       }
     }
     """ becomes
-    """
+      """
     package extractClosure
     object Demo{
       def list(a: Int) = {
@@ -238,7 +238,7 @@ class ExtractClosureTest extends util.TestRefactoring {
     }
     """
   }.refactor(extract("mkGreeting", Nil)).assertEqualTree
-  
+
   @Test
   def extractExpressionWithParams = new FileSet {
     """
@@ -250,7 +250,7 @@ class ExtractClosureTest extends util.TestRefactoring {
       }
     }
     """ becomes
-    """
+      """
     package extractClosure
     object Demo {
       def calc = {
@@ -317,7 +317,7 @@ class ExtractClosureTest extends util.TestRefactoring {
     }
     """
   }.refactor(extract("extracted", Nil)).assertEqualCode
-  
+
   @Test
   def extractFromObject = new FileSet {
     """
@@ -338,7 +338,7 @@ class ExtractClosureTest extends util.TestRefactoring {
 	}
     """
   }.refactor(extract("extracted", Nil)).assertEqualCode
-  
+
   @Test
   def extractFromInnerDef = new FileSet {
     """
@@ -351,7 +351,7 @@ class ExtractClosureTest extends util.TestRefactoring {
       }
     }
     """ becomes
-    """
+      """
     package extractClosure
     object Demo{
       def printInfo = {
@@ -366,7 +366,7 @@ class ExtractClosureTest extends util.TestRefactoring {
     }
     """
   }.refactor(extract("extracted", "name" :: Nil)).assertEqualTree
-  
+
   @Test
   def extractFromAnonymousFunction = new FileSet {
     """
@@ -380,7 +380,7 @@ class ExtractClosureTest extends util.TestRefactoring {
       }
     }
     """ becomes
-    """
+      """
     package extractClosure
     object Demo{
       def printInfo = {
@@ -395,9 +395,9 @@ class ExtractClosureTest extends util.TestRefactoring {
     }
     """
   }.refactor(extract("extracted", Nil)).assertEqualTree
-  
+
   @Test
-  def extractFromCase = new FileSet{
+  def extractFromCase = new FileSet {
     """
     package extractClosure
     object Demo{
@@ -406,7 +406,7 @@ class ExtractClosureTest extends util.TestRefactoring {
       }
     }
     """ becomes
-    """
+      """
     package extractClosure
     object Demo{
       private def out(a: Int): Unit = {
@@ -419,9 +419,9 @@ class ExtractClosureTest extends util.TestRefactoring {
     }
     """
   }.refactor(extract("out", "a" :: Nil)).assertEqualTree
-  
+
   @Test
-  def extractFromNonBlock = new FileSet{
+  def extractFromNonBlock = new FileSet {
     """
     package extractClosure
     object Demo{
@@ -432,7 +432,7 @@ class ExtractClosureTest extends util.TestRefactoring {
       }
     }
     """ becomes
-    """
+      """
     package extractClosure
     object Demo{
       def calc(a: Int) = {
@@ -446,9 +446,9 @@ class ExtractClosureTest extends util.TestRefactoring {
     }
     """
   }.refactor(extract("extracted", "a" :: Nil)).assertEqualTree
-  
+
   @Test
-  def extractFromForEnumerator = new FileSet{
+  def extractFromForEnumerator = new FileSet {
     """
     package extractClosure
     object Demo{
@@ -459,7 +459,7 @@ class ExtractClosureTest extends util.TestRefactoring {
       }
     }
     """ becomes
-    """
+      """
     package extractClosure
     object Demo{
       def list(a: Int) = {
@@ -473,9 +473,9 @@ class ExtractClosureTest extends util.TestRefactoring {
     }
     """
   }.refactor(extract("extracted", "a" :: Nil)).assertEqualTree
-  
+
   @Test
-  def extractFromYield = new FileSet{
+  def extractFromYield = new FileSet {
     """
     package extractClosure
     object Demo{
@@ -484,7 +484,7 @@ class ExtractClosureTest extends util.TestRefactoring {
       }
     }
     """ becomes
-    """
+      """
     package extractClosure
     object Demo{
       def list(a: Int) = {
@@ -496,9 +496,9 @@ class ExtractClosureTest extends util.TestRefactoring {
     }
     """
   }.refactor(extract("extracted", Nil)).assertEqualTree
-  
+
   @Test
-  def extractFromObjectUsingGlobalAsParameter = new FileSet{
+  def extractFromObjectUsingGlobalAsParameter = new FileSet {
     """
     package extractClosure
     object Demo{
@@ -507,7 +507,7 @@ class ExtractClosureTest extends util.TestRefactoring {
         println("> 10")
     }
     """ becomes
-    """
+      """
     package extractClosure
     object Demo{
       private def extracted(a: => Int): Boolean = {
@@ -520,4 +520,32 @@ class ExtractClosureTest extends util.TestRefactoring {
     }
     """
   }.refactor(extract("extracted", "a" :: Nil)).assertEqualCode
+
+  def nameOccurrencesIn(code: String, closureName: String) = {
+    val fs = new FileSet {
+      code becomes ""
+    }
+    val r = new TestRefactoringImpl(fs) {
+      val refactoring = new ExtractClosure with SilentTracing with TestProjectIndex
+      val params = refactoring.RefactoringParameters(closureName, _ => true)
+    }
+    val sel = selection(r.refactoring, fs)
+    r.refactoring.getClosureNameOccurences(sel, r.params)
+  }
+
+  @Test
+  def nameOccurrences = {
+    val nameOccurrences = nameOccurrencesIn("""
+    object Demo{
+      /*(*/private def ef(a: => Int): Boolean = {
+        a > 10
+      }
+
+      val a = 100
+	  if(ef(a)/*)*/)
+        println("> 10")
+    }
+    """, "ef")
+    assertEquals(List((41, 2), (116, 2)), nameOccurrences)
+  }
 }
