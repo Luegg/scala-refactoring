@@ -590,4 +590,23 @@ class ExtractClosureTest extends util.TestRefactoring {
     """, "extracted")
     assertEquals(List(List((72, 2), (100, 2), (109, 2))), paramOccurrences)
   }
+
+  @Test
+  def multiParamOccurrences = {
+    val paramOccurrences = paramOccurrencesIn("""
+    object Demo{
+      def list(a: Int) = {
+        /*(*/def extracted(a: Int, bc: Int, de: Int): Int = {
+          a * bc * de * bc * a
+        }
+        for(bc <- 1 to 10; de <- 1 to 10) yield extracted(a, bc, de)/*)*/
+      }
+    }
+    """, "extracted")
+    assertEquals(
+      List(
+        List((72, 1), (117, 1), (136, 1)),
+        List((80, 2), (121, 2), (131, 2)),
+        List((89, 2), (126, 2))), paramOccurrences)
+  }
 }
