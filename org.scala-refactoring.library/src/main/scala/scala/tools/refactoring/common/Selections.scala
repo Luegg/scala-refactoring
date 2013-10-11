@@ -55,6 +55,13 @@ trait Selections extends TreeTraverser with common.PimpedTrees {
       case t: SymTree => Some(t.symbol)
       case _ => None
     }
+    
+    /**
+     * Returns the tree that fully encloses the selection.
+     */
+    lazy val enclosingTree = findSelectedWithPredicate { t =>
+      t.pos.isRange && t.pos.start < pos.start && t.pos.end > pos.end
+    } getOrElse EmptyTree
 
     /**
      * Returns true if the given Tree is fully contained in the selection.

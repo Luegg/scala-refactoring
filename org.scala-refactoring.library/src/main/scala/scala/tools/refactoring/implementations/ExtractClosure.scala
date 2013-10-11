@@ -145,10 +145,7 @@ abstract class ExtractClosure extends MultiStageRefactoring with TreeAnalysis wi
   }
 
   private def findDefDefByName(selection: Selection, closureName: String): Option[Tree] = {
-    val enclosingTree = selection.findSelectedWithPredicate { t =>
-      t.pos.isRange && t.pos.start < selection.pos.start && t.pos.end > selection.pos.end
-    }
-    enclosingTree.getOrElse(EmptyTree).find {
+    selection.enclosingTree.find {
       case d @ DefDef(_, name, _, _, _, _) =>
         name.decode == closureName
       case _ => false
