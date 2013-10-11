@@ -8,14 +8,12 @@ import org.junit.Test
 import scala.reflect.internal.util.Position
 
 class OccurrencesTest extends util.TestRefactoring {
-  implicit val toOccurrence = Occurrences.posToBeginLengthPair
-
   def initRefactoring(code: String) = {
     val fs = new FileSet {
       code becomes ""
     }
     val r = new TestRefactoringImpl(fs) {
-      val refactoring = new MultiStageRefactoring with SilentTracing with TestProjectIndex with Occurrences[(Int, Int)] {
+      val refactoring = new MultiStageRefactoring with SilentTracing with TestProjectIndex with Occurrences {
         def prepare(selection: Selection) = ???
         def perform(selection: Selection, prepared: PreparationResult, params: RefactoringParameters) = ???
         val s = selection(this, fs)
