@@ -21,7 +21,7 @@ abstract class ExtractClosure extends MultiStageRefactoring with TreeAnalysis wi
   case class RefactoringParameters(
     /** name of the closure function */
     closureName: String,
-    /** defines for each optional parameter if it's used as a closure parameter */
+    /** returns for each optional parameter if it should be used as a closure parameter */
     closureParameters: Symbol => Boolean)
 
   def prepare(selection: Selection): Either[PreparationError, PreparationResult] = {
@@ -38,6 +38,9 @@ abstract class ExtractClosure extends MultiStageRefactoring with TreeAnalysis wi
         case t: DefTree => !selection.contains(t)
         case _ => false
       }.map(_.symbol)
+      
+      println(deps)
+      println(newSymbolsBetweenEnclosingAndSelection)
 
       val (requiredParams, optionalParams) = deps.partition { sym =>
         newSymbolsBetweenEnclosingAndSelection.contains(sym)
@@ -49,9 +52,17 @@ abstract class ExtractClosure extends MultiStageRefactoring with TreeAnalysis wi
     val definesNonLocal = selection.selectedSymbols.exists { sym =>
       !sym.isLocal && index.declaration(sym).exists(selection.contains(_))
     }
+    
+    val definesDef = selection.selectedTopLevelTrees.exists{ 
+      case d: DefDef => true
+      case _ => false
+    }
 
+    println("begin")
     if (definesNonLocal)
-      Left(PreparationError("Can't extract expressions that defines non local fields"))
+      Left(PreparationError("Can't extract expression that defines non local fields."))
+    else if(definesDef)
+      Left(PreparationError("Can't extract expression that defines named functions."))
     else if (selection.selectedTopLevelTrees.size > 0)
       selection.findSelectedWithPredicate { // find a tree to insert the closure definition
         case b: Block if b == selection.selectedTopLevelTrees.head => false

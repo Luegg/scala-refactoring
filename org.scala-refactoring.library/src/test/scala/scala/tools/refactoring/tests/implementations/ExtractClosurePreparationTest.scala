@@ -5,12 +5,12 @@ import tests.util
 import implementations.ExtractClosure
 import org.junit.Assert._
 
-class ExtractClosurePreparationTest extends util.TestPreparation{
-  case class Prepare(fs: FileSet) extends Preparation(fs){
+class ExtractClosurePreparationTest extends util.TestPreparation {
+  case class Prepare(fs: FileSet) extends Preparation(fs) {
     val refactoring = new ExtractClosure with SilentTracing with TestProjectIndex
-    
+
     val PreparationResult = refactoring.PreparationResult
-    
+
     def assertParameters(optional: List[String], required: List[String]) = {
       val Right(PreparationResult(_, opt, req)) = preparationResult
       assertEquals(optional.length, opt.length)
@@ -123,5 +123,19 @@ class ExtractClosurePreparationTest extends util.TestPreparation{
     """)
     .assertSuccess
     .assertParameters(Nil, Nil)
+    .done
+
+  @Test
+  def prepareExtractionOfClosure = Prepare(
+    """
+    object Demo {
+      def a = {
+        println("first")
+        /*(*/def b(c: Any) = c/*)*/
+        println(b("second"))
+      }
+    }
+    """)
+    .assertFailure
     .done
 }
