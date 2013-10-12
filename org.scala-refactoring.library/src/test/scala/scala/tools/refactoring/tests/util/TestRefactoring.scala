@@ -39,7 +39,7 @@ trait TestRefactoring extends TestHelper {
 
     val refactoring: MultiStageRefactoring with InteractiveScalaCompiler
 
-    def preparationResult = global.ask { () =>
+    lazy val preparationResult = global.ask { () =>
       refactoring.prepare(selection(refactoring, project))
     }
 
