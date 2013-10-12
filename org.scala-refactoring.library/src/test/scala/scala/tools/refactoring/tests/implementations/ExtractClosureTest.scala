@@ -4,6 +4,7 @@ package tests.implementations
 import tests.util
 import implementations.ExtractClosure
 import org.junit.Assert._
+import org.junit.Assert.{ fail => failTest }
 import org.junit.Test
 
 class ExtractClosureTest extends util.TestRefactoring {
@@ -14,91 +15,6 @@ class ExtractClosureTest extends util.TestRefactoring {
     val filter = (sym: refactoring.global.Symbol) => closureParams.contains(sym.nameString)
     val changes = performRefactoring(refactoring.RefactoringParameters(closureName, filter))
   }.changes
-
-  def prepare(fileContent: String) = {
-    val files = new FileSet { fileContent becomes "" }
-    val refactoringImpl = new TestRefactoringImpl(files) {
-      val refactoring = new ExtractClosure with SilentTracing with TestProjectIndex
-    }
-    val result = refactoringImpl.preparationResult
-
-    new {
-      def assertSuccess =
-        assertTrue(result.isRight)
-      def assertFailure =
-        assertTrue(result.isLeft)
-    }
-  }
-
-  @Test
-  def prepareExpressionInObjectNotDefiningNewMembers = prepare(
-    """
-    package extractClosure
-    object Demo {
-      val os = "abc"
-      val osx = "MAC"
-      
-      if(/*(*/os.toUpperCase.indexOf(osx) != -1/*)*/)
-        println("you're using Mac OsX");
-    }
-    """).assertSuccess
-
-  @Test
-  def prepareExpressionsDefiningNewMembers = prepare(
-    """
-    package extractClosure
-    object Demo {
-      /*(*/val a = 1/*)*/
-    }
-    """).assertFailure
-
-  @Test
-  def prepareExpressionInMethod = prepare(
-    """
-    package extractClosure
-    object Demo {
-      val os = "abc"
-      val osx = "MAC"
-      
-      def printOsInfo =
-        if(/*(*/os.toUpperCase.indexOf(osx) != -1/*)*/)
-          println("you're using Mac OsX");
-    }
-    """).assertSuccess
-
-  @Test
-  def prepareSeqOfExpressions = prepare(
-    """
-    package extractClosure
-    object Demo {
-      def printThree = {
-        /*(*/val a = 1
-        val b = 2/*)*/
-        println(a+b)
-      }
-    }
-    """).assertSuccess
-
-  @Test
-  def prepareWithInvalidSelection = prepare(
-    """
-    package extractClosure
-    object Demo {
-      /*(*/def printString/*)*/(v: Any) =
-      println(v.toString)
-    }
-    """).assertFailure
-
-  @Test
-  def prepareWithInevitableParameter = prepare(
-    """
-    package extractClosure
-    object Demo {
-      def a = {
-        ((i: Int) => /*(*/println(i)/*)*/)(1)
-	  }
-    }
-    """).assertSuccess
 
   @Test
   def extractSimpleExpression = new FileSet {
