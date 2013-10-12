@@ -38,9 +38,6 @@ abstract class ExtractClosure extends MultiStageRefactoring with TreeAnalysis wi
         case t: DefTree => !selection.contains(t)
         case _ => false
       }.map(_.symbol)
-      
-      println(deps)
-      println(newSymbolsBetweenEnclosingAndSelection)
 
       val (requiredParams, optionalParams) = deps.partition { sym =>
         newSymbolsBetweenEnclosingAndSelection.contains(sym)
@@ -52,16 +49,15 @@ abstract class ExtractClosure extends MultiStageRefactoring with TreeAnalysis wi
     val definesNonLocal = selection.selectedSymbols.exists { sym =>
       !sym.isLocal && index.declaration(sym).exists(selection.contains(_))
     }
-    
-    val definesDef = selection.selectedTopLevelTrees.exists{ 
+
+    val definesDef = selection.selectedTopLevelTrees.exists {
       case d: DefDef => true
       case _ => false
     }
 
-    println("begin")
     if (definesNonLocal)
       Left(PreparationError("Can't extract expression that defines non local fields."))
-    else if(definesDef)
+    else if (definesDef)
       Left(PreparationError("Can't extract expression that defines named functions."))
     else if (selection.selectedTopLevelTrees.size > 0)
       selection.findSelectedWithPredicate { // find a tree to insert the closure definition
