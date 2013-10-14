@@ -111,6 +111,7 @@ class ExtractClosurePreparationTest extends util.TestPreparation {
     .done
 
   @Test
+  @Ignore
   def prepareExpressionsWithTuppleExtraction = Prepare(
     """
     package extractClosure

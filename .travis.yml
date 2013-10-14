@@ -3,4 +3,5 @@ scala:
   - "2.10.3"
 jdk:
   - oraclejdk7
-script: ./.travis.build.sh
+install: "mvn install -DskipTests=true -Dscala.version=2.10.3 -B -P scala-2.10.x"
+script: ./build-2.10.sh
