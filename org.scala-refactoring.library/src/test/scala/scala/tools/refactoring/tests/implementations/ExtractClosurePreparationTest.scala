@@ -13,8 +13,8 @@ class ExtractClosurePreparationTest extends util.TestPreparation {
 
     def assertParameters(optional: List[String], required: List[String]) = {
       val Right(PreparationResult(_, opt, req)) = preparationResult
-      assertEquals(optional.length, opt.length)
-      assertEquals(required.length, req.length)
+      assertEquals(s"expected optional parameters $optional but was $opt", optional.length, opt.length)
+      assertEquals(s"expected optional parameters $required but was $req", required.length, req.length)
       for (expected <- optional ::: required) {
         assertTrue((opt ::: req).exists { sym =>
           sym.nameString == expected
