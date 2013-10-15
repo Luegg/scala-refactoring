@@ -33,7 +33,9 @@ abstract class ExtractClosure extends MultiStageRefactoring with TreeAnalysis wi
           t.exists(p => p == selection.allSelectedTrees.head)
       }.headOption.getOrElse(EmptyTree)
 
-      val deps = inboundDependencies(selection).distinct
+      val deps = inboundDependencies(selection)
+        .filter(s => s.isValue && !s.isConstructor)
+        .distinct
       val newSymbolsBetweenEnclosingAndSelection = childContainingSelection.filter {
         case t: DefTree => !selection.contains(t)
         case _ => false
