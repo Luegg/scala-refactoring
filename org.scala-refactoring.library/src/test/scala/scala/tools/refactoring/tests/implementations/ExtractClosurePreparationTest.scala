@@ -111,7 +111,6 @@ class ExtractClosurePreparationTest extends util.TestPreparation {
     .done
 
   @Test
-  @Ignore
   def prepareExpressionsWithTuppleExtraction = Prepare(
     """
     package extractClosure
@@ -119,6 +118,20 @@ class ExtractClosurePreparationTest extends util.TestPreparation {
       def a = {
         /*(*/val (a, b) = (1, 2)
 	    a * b/*)*/
+	  }
+    }
+    """)
+    .assertSuccess
+    .assertParameters(Nil, Nil)
+    .done
+
+  @Test
+  def prepareExpressionsWithListExtraction = Prepare(
+    """
+    package extractClosure
+    object Demo {
+      def a = {
+        /*(*/val a :: as = List(1, 2, 3)/*)*/
 	  }
     }
     """)

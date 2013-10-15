@@ -35,7 +35,7 @@ abstract class ExtractClosure extends MultiStageRefactoring with TreeAnalysis wi
 
       val deps = inboundDependencies(selection)
         .filter(s => s.isValue && !s.isConstructor)
-        .distinct
+
       val newSymbolsBetweenEnclosingAndSelection = childContainingSelection.filter {
         case t: DefTree => !selection.contains(t)
         case _ => false
@@ -75,10 +75,12 @@ abstract class ExtractClosure extends MultiStageRefactoring with TreeAnalysis wi
   }
 
   def perform(selection: Selection, preparation: PreparationResult, userInput: RefactoringParameters): Either[RefactoringError, List[Change]] = {
-    val params = inboundDependencies(selection).distinct.filter { dep =>
-      preparation.requiredParameters.contains(dep) ||
-        preparation.optionalParameters.filter(userInput.closureParameters(_)).contains(dep)
-    }
+    val selectedOptionalParams = preparation.optionalParameters.filter(userInput.closureParameters(_))
+    val params = inboundDependencies(selection)
+      .filter { dep =>
+        preparation.requiredParameters.contains(dep) ||
+          selectedOptionalParams.contains(dep)
+      }
     val returns = outboundLocalDependencies(selection).distinct
 
     val closure = {
@@ -109,8 +111,8 @@ abstract class ExtractClosure extends MultiStageRefactoring with TreeAnalysis wi
 
     val replaceSequenceWithCall =
       transform {
-        case block @ BlockExtractor(stats) if stats.size > 0 => {
-          val newStats = stats.replaceSequence(selection.selectedTopLevelTrees, call :: Nil)
+        case block @ Block(stats, expr) => {
+          val newStats = (stats :+ expr).replaceSequence(selection.selectedTopLevelTrees, call :: Nil)
           mkBlock(newStats) replaces block
         }
       }

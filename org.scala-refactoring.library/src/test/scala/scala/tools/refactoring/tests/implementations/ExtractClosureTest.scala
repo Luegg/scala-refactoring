@@ -436,4 +436,30 @@ class ExtractClosureTest extends util.TestRefactoring {
     }
     """
   }.refactor(extract("extracted", "a" :: Nil)).assertEqualCode
+  
+  @Test
+  def extractExtractorAssignment = new FileSet {
+    """
+    package extractClosure
+    object Demo{
+      def fn = {
+        /*(*/val (a, b) = (1, 2)/*)*/
+        (a, b)
+      }
+    }
+    """ becomes
+      """
+    package extractClosure
+    object Demo{
+      def fn = {
+        def extracted: (Int, Int) = {
+          /*(*/val (a, b) = (1, 2)/*)*/
+          (a, b)
+        }
+        val (a, b) = extracted
+        (a, b)
+      }
+    }
+    """
+  }.refactor(extract("extracted", Nil)).assertEqualCode
 }

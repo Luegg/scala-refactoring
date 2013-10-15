@@ -37,11 +37,12 @@ trait TreeAnalysis {
    * outside the selection.
    */
   def inboundDependencies(selection: Selection): List[global.Symbol] = {
-    for {
+    (for {
       selected <- selection.selectedSymbols
       declaration <- index.declaration(selected)
-      if !selection.contains(declaration)
-    } yield selected
+      if !selection.pos.includes(declaration.pos)
+    } yield selected)
+      .distinct
   }
 
   /**
