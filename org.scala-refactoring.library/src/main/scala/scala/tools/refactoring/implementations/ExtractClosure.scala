@@ -43,30 +43,33 @@ abstract class ExtractClosure extends MultiStageRefactoring with TreeAnalysis wi
         newSymbolsBetweenEnclosingAndSelection.contains(sym)
       }
 
-      Right(PreparationResult(enclosingTree, optionalParams, requiredParams))
+      PreparationResult(enclosingTree, optionalParams, requiredParams)
     }
 
     val definesNonLocal = selection.selectedSymbols.exists { sym =>
       !sym.isLocal && index.declaration(sym).exists(selection.contains(_))
     }
 
-    val definesDef = selection.selectedTopLevelTrees.exists {
-      case d: DefDef => true
+    val definesNonValue = selection.selectedTopLevelTrees.exists {
+      case t: MemberDef => !t.isInstanceOf[ValDef]
       case _ => false
     }
 
     if (definesNonLocal)
       Left(PreparationError("Can't extract expression that defines non local fields."))
-    else if (definesDef)
-      Left(PreparationError("Can't extract expression that defines named functions."))
-    else if (selection.selectedTopLevelTrees.size > 0)
+    else if (definesNonValue)
+      Left(PreparationError("Can't extract expression that defines non-value symbols."))
+    else if (selection.selectedTopLevelTrees.size == 0)
+      Left(PreparationError("No expression or statement selected."))
+    else
       selection.findSelectedWithPredicate { // find a tree to insert the closure definition
         case b: Block if b == selection.selectedTopLevelTrees.head => false
         case _: DefDef | _: Block | _: Template => true
         case _ => false
-      }.map(mkPreparationResult(_)).getOrElse(Left(PreparationError("Can't extract closure from this position.")))
-    else
-      Left(PreparationError("No expression or statement selected."))
+      } match {
+        case Some(t) => Right(mkPreparationResult(t))
+        case _ => Left(PreparationError("Can't extract closure from this position."))
+      }
   }
 
   def perform(selection: Selection, preparation: PreparationResult, userInput: RefactoringParameters): Either[RefactoringError, List[Change]] = {
