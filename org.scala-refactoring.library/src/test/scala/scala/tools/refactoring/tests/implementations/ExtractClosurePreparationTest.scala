@@ -127,16 +127,64 @@ class ExtractClosurePreparationTest extends util.TestPreparation {
     .done
 
   @Test
-  def prepareExtractionOfClosure = Prepare(
+  def prepareExtractionOfMethod = Prepare(
     """
     object Demo {
       def a = {
-        println("first")
         /*(*/def b(c: Any) = c/*)*/
-        println(b("second"))
       }
     }
     """)
     .assertFailure
+    .done
+
+  @Test
+  def prepareExtractionOfTypeAlias = Prepare(
+    """
+    object Demo {
+      def a = {
+        /*(*/type T = Int/*)*/
+      }
+    }
+    """)
+    .assertFailure
+    .done
+
+  @Test
+  def prepareExtractionOfClassDefinition = Prepare(
+    """
+    object Demo {
+      def a = {
+        /*(*/class A/*)*/
+      }
+    }
+    """)
+    .assertFailure
+    .done
+
+  @Test
+  def prepareExtractionOfObjectDefinition = Prepare(
+    """
+    object Demo {
+      def a = {
+        /*(*/object A/*)*/
+      }
+    }
+    """)
+    .assertFailure
+    .done
+
+  @Test
+  def prepareWithClassAsInboundDependency = Prepare(
+    """
+    object Demo {
+      def a = {
+        class A
+        /*(*/new A/*)*/
+      }
+    }
+    """)
+    .assertSuccess
+    .assertParameters(Nil, Nil)
     .done
 }
