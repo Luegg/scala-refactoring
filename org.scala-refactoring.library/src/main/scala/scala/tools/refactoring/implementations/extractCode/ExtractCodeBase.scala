@@ -96,7 +96,7 @@ trait ExtractCodeBase extends MultiStageRefactoring with TreeAnalysis with Index
 
   def extract(selection: Selection, extractionTarget: ExtractionTarget): Either[RefactoringError, List[Change]] = {
     extractionTarget.getCodeAndCall(selection).right.map { (codeAndCall) =>
-      val (closure, call) = codeAndCall
+      val (abstraction, call) = codeAndCall
       val extractSingleStatement = selection.selectedTopLevelTrees.size == 1
 
       val replaceExpressionWithCall =
@@ -112,26 +112,26 @@ trait ExtractCodeBase extends MultiStageRefactoring with TreeAnalysis with Index
 
       val findEnclosingTree = predicate { (t: Tree) => t == extractionTarget.targetScope.tree }
 
-      def insertClosureInSequence(statements: List[Tree]) = {
+      def insertAbstractionInSequence(statements: List[Tree]) = {
         val (before, after) = statements.span { t =>
           t.pos.isRange && t.pos.end <= selection.pos.start
         }
         if (before.length == 0)
-          closure :: after
+          abstraction :: after
         else
-          before ::: closure :: after
+          before ::: abstraction :: after
       }
 
-      val insertClosureDef = transform {
+      val insertAbstraction = transform {
         case t @ Block(stats, expr) =>
-          t copy (stats = insertClosureInSequence(stats)) replaces t
+          t copy (stats = insertAbstractionInSequence(stats)) replaces t
         case t @ Template(_, _, body) =>
-          t copy (body = insertClosureInSequence(body)) replaces t
+          t copy (body = insertAbstractionInSequence(body)) replaces t
         case t @ DefDef(_, _, _, _, _, NoBlock(rhs)) =>
-          t copy (rhs = Block(closure :: Nil, rhs)) replaces t
+          t copy (rhs = Block(abstraction :: Nil, rhs)) replaces t
       }
 
-      val extractClosure = topdown {
+      val extractCode = topdown {
         matchingChildren {
           findEnclosingTree &>
             {
@@ -144,11 +144,11 @@ trait ExtractCodeBase extends MultiStageRefactoring with TreeAnalysis with Index
                   }
                 }
             } &>
-            insertClosureDef
+            insertAbstraction
         }
       }
 
-      transformFile(selection.file, extractClosure)
+      transformFile(selection.file, extractCode)
     }
   }
 }
