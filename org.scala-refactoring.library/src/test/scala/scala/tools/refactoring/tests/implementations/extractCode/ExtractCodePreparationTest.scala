@@ -9,10 +9,10 @@ class ExtractCodePreparationTest extends util.TestPreparation {
   case class Prepare(fs: FileSet) extends Preparation(fs) {
     val refactoring = new ExtractCode with SilentTracing with TestProjectIndex
 
-    val PreparationResult = refactoring.PreparationResult
+    import refactoring._
 
     def assertParameters(optional: List[String], required: List[String]) = {
-      val Right(PreparationResult(_, opt, req)) = preparationResult
+      val Right(PreparationResult(TargetScope(_, opt, req) :: Nil)) = preparationResult
       assertEquals(s"expected optional parameters $optional but was $opt", optional.length, opt.length)
       assertEquals(s"expected optional parameters $required but was $req", required.length, req.length)
       for (expected <- optional ::: required) {
