@@ -11,8 +11,9 @@ class ExtractCodePreparationTest extends util.TestPreparation {
 
     import refactoring._
 
-    def assertParameters(optional: List[String], required: List[String]) = {
-      val Right(PreparationResult(TargetScope(_, opt, req) :: Nil)) = preparationResult
+    def assertScopes(scopes: (List[String], List[String])*) = {
+      val (optional, required) = scopes.head
+      val TargetScope(_, opt, req) = preparationResult.right.get.targetScopes.last
       assertEquals(s"expected optional parameters $optional but was $opt", optional.length, opt.length)
       assertEquals(s"expected optional parameters $required but was $req", required.length, req.length)
       for (expected <- optional ::: required) {
@@ -37,7 +38,7 @@ class ExtractCodePreparationTest extends util.TestPreparation {
     }
     """)
     .assertSuccess
-    .assertParameters(List("os", "osx"), Nil)
+    .assertScopes((List("os", "osx"), Nil))
     .done
 
   @Test
@@ -65,7 +66,7 @@ class ExtractCodePreparationTest extends util.TestPreparation {
     }
     """)
     .assertSuccess
-    .assertParameters(List("os", "osx"), Nil)
+    .assertScopes((List("os", "osx"), Nil))
     .done
 
   @Test
@@ -81,7 +82,7 @@ class ExtractCodePreparationTest extends util.TestPreparation {
     }
     """)
     .assertSuccess
-    .assertParameters(Nil, Nil)
+    .assertScopes((Nil, Nil))
     .done
 
   @Test
@@ -107,7 +108,7 @@ class ExtractCodePreparationTest extends util.TestPreparation {
     }
     """)
     .assertSuccess
-    .assertParameters(Nil, List("i"))
+    .assertScopes((Nil, List("i")))
     .done
 
   @Test
@@ -122,7 +123,7 @@ class ExtractCodePreparationTest extends util.TestPreparation {
     }
     """)
     .assertSuccess
-    .assertParameters(Nil, Nil)
+    .assertScopes((Nil, Nil))
     .done
 
   @Test
@@ -136,7 +137,7 @@ class ExtractCodePreparationTest extends util.TestPreparation {
     }
     """)
     .assertSuccess
-    .assertParameters(Nil, Nil)
+    .assertScopes((Nil, Nil))
     .done
 
   @Test
@@ -198,6 +199,6 @@ class ExtractCodePreparationTest extends util.TestPreparation {
     }
     """)
     .assertSuccess
-    .assertParameters(Nil, Nil)
+    .assertScopes((Nil, Nil))
     .done
 }

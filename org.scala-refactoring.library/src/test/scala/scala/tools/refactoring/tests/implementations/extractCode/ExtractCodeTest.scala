@@ -8,6 +8,9 @@ import org.junit.Assert._
 class ExtractCodeTest extends util.TestRefactoring {
   import global._
 
+  /**
+   * Performs the ExtractCode refactoring by selecting the innermost target scope.
+   */
   def extract(closureName: String, closureParams: List[String])(files: FileSet) = new TestRefactoringImpl(files) {
     val refactoring = new ExtractCode with SilentTracing with TestProjectIndex
     val filter = (sym: refactoring.global.Symbol) => closureParams.contains(sym.nameString)

@@ -24,20 +24,19 @@ abstract class ExtractCode extends MultiStageRefactoring with TreeAnalysis with 
     /** required parameters for a new method in this scope*/
     requiredParameters: List[Symbol])
 
-  case class PreparationResult(
-    targetScopes: List[TargetScope])
+  object TargetScope {
+    /**
+     * Constructs TargetScope from the scope represented by `tree` and a selection
+     * which marks the code to extract
+     */
+    def apply(tree: Tree, selection: Selection): TargetScope = {
+      val (opt, req) = getParameters(tree, selection)
+      TargetScope(tree, opt, req)
+    }
 
-  case class RefactoringParameters(
-    /** name of the closure function */
-    closureName: String,
-    /** returns for each optional parameter if it should be used as a closure parameter */
-    closureParameters: Symbol => Boolean)
-
-  def prepare(selection: Selection): Either[PreparationError, PreparationResult] = {
-
-    def mkPreparationResult(enclosingTree: Tree) = {
-      val childContainingSelection = enclosingTree.filter { t =>
-        t != enclosingTree &&
+    private def getParameters(tree: Tree, selection: Selection) = {
+      val childContainingSelection = tree.filter { t =>
+        t != tree &&
           t.pos.isRange && t.pos.start < selection.pos.start &&
           t.exists(p => p == selection.allSelectedTrees.head)
       }.headOption.getOrElse(EmptyTree)
@@ -54,9 +53,30 @@ abstract class ExtractCode extends MultiStageRefactoring with TreeAnalysis with 
         newSymbolsBetweenEnclosingAndSelection.contains(sym)
       }
 
-      PreparationResult(TargetScope(enclosingTree, optionalParams, requiredParams) :: Nil)
+      (optionalParams, requiredParams)
     }
+  }
 
+  case class PreparationResult(
+    targetScopes: List[TargetScope])
+
+  case class RefactoringParameters(
+    /** name of the closure function */
+    closureName: String,
+    /** returns for each optional parameter if it should be used as a closure parameter */
+    closureParameters: Symbol => Boolean)
+    
+  private def findTargetScopes(selection: Selection) = {
+      val scopes = selection.filterSelectedWithPredicate {
+        case b: Block if b == selection.selectedTopLevelTrees.head => false
+        case _: DefDef | _: Block | _: Template => true
+        case _ => false
+      }
+      
+      scopes.map(TargetScope(_, selection))
+  }
+
+  def prepare(selection: Selection): Either[PreparationError, PreparationResult] = {
     val definesNonLocal = selection.selectedSymbols.exists { sym =>
       !sym.isLocal && index.declaration(sym).exists(selection.contains(_))
     }
@@ -73,21 +93,17 @@ abstract class ExtractCode extends MultiStageRefactoring with TreeAnalysis with 
     else if (selection.selectedTopLevelTrees.size == 0)
       Left(PreparationError("No expression or statement selected."))
     else
-      selection.findSelectedWithPredicate { // find a tree to insert the closure definition
-        case b: Block if b == selection.selectedTopLevelTrees.head => false
-        case _: DefDef | _: Block | _: Template => true
-        case _ => false
-      } match {
-        case Some(t) => Right(mkPreparationResult(t))
-        case _ => Left(PreparationError("Can't extract closure from this position."))
-      }
+      findTargetScopes(selection) match{
+      case Nil => Left(PreparationError("Can't extract closure from this position."))
+      case scopes => Right(PreparationResult(scopes))
+    }
   }
 
   def perform(selection: Selection, preparation: PreparationResult, userInput: RefactoringParameters): Either[RefactoringError, List[Change]] = {
-    val selectedOptionalParams = preparation.targetScopes.head.optionalParameters.filter(userInput.closureParameters(_))
+    val selectedOptionalParams = preparation.targetScopes.last.optionalParameters.filter(userInput.closureParameters(_))
     val params = inboundDependencies(selection)
       .filter { dep =>
-        preparation.targetScopes.head.requiredParameters.contains(dep) ||
+        preparation.targetScopes.last.requiredParameters.contains(dep) ||
           selectedOptionalParams.contains(dep)
       }
     val returns = outboundLocalDependencies(selection).distinct
@@ -99,7 +115,7 @@ abstract class ExtractCode extends MultiStageRefactoring with TreeAnalysis with 
         case Block(stats, expr) :: Nil => stats ::: expr :: returnStatement
         case stats => stats ::: returnStatement
       }
-      val mods = preparation.targetScopes.head.tree match {
+      val mods = preparation.targetScopes.last.tree match {
         case _: Template => NoMods withPosition (Flags.PRIVATE, NoPosition)
         case _ => NoMods
       }
@@ -126,7 +142,7 @@ abstract class ExtractCode extends MultiStageRefactoring with TreeAnalysis with 
         }
       }
 
-    val findEnclosingTree = predicate { (t: Tree) => t == preparation.targetScopes.head.tree }
+    val findEnclosingTree = predicate { (t: Tree) => t == preparation.targetScopes.last.tree }
 
     def insertClosureInSequence(statements: List[Tree]) = {
       val (before, after) = statements.span { t =>
