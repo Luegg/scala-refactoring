@@ -96,8 +96,8 @@ abstract class ExtractCode extends MultiStageRefactoring with TreeAnalysis with 
       }
   }
 
-  def perform(selection: Selection, preparation: PreparationResult, userInput: RefactoringParameters): Either[RefactoringError, List[Change]] = {
-    userInput.getCodeAndCall(selection).right.map { (codeAndCall) =>
+  def perform(selection: Selection, preparation: PreparationResult, extractionTarget: RefactoringParameters): Either[RefactoringError, List[Change]] = {
+    extractionTarget.getCodeAndCall(selection).right.map { (codeAndCall) =>
       val (closure, call) = codeAndCall
       val extractSingleStatement = selection.selectedTopLevelTrees.size == 1
 
@@ -112,7 +112,7 @@ abstract class ExtractCode extends MultiStageRefactoring with TreeAnalysis with 
           }
         }
 
-      val findEnclosingTree = predicate { (t: Tree) => t == userInput.targetScope.tree }
+      val findEnclosingTree = predicate { (t: Tree) => t == extractionTarget.targetScope.tree }
 
       def insertClosureInSequence(statements: List[Tree]) = {
         val (before, after) = statements.span { t =>

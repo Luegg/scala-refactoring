@@ -16,19 +16,19 @@ trait ExtractionTargets { self: ExtractCode =>
 
     val selectedParameters: List[Symbol]
 
-    def getCodeAndCall(selection: Selection): Either[String, (Tree, Tree)]
+    def getCodeAndCall(selection: Selection): Either[RefactoringError, (Tree, Tree)]
 
-    def parameters(selection: Selection) =
+    protected def parameters(selection: Selection) =
       inboundDependencies(selection)
         .filter { dep =>
           targetScope.requiredParameters.contains(dep) ||
             selectedParameters.contains(dep)
         }
 
-    def returnValues(selection: Selection) =
+    protected def returnValues(selection: Selection) =
       outboundLocalDependencies(selection).distinct
 
-    def body(selection: Selection) = {
+    protected def body(selection: Selection) = {
       val returns = returnValues(selection)
       val returnStatement = if (returns.isEmpty) Nil else mkReturn(returns) :: Nil
       selection.selectedTopLevelTrees match {
@@ -38,12 +38,12 @@ trait ExtractionTargets { self: ExtractCode =>
       }
     }
 
-    val mods = targetScope.tree match {
+    protected val mods = targetScope.tree match {
       case _: Template => NoMods withPosition (Flags.PRIVATE, NoPosition)
       case _ => NoMods
     }
 
-    def defDefAndCall(selection: Selection) = {
+    protected def defDefWithCall(selection: Selection) = {
       val params = parameters(selection)
       val method = mkDefDef(
         mods,
@@ -54,6 +54,14 @@ trait ExtractionTargets { self: ExtractCode =>
 
       (method, call)
     }
+
+    protected def valDefWithCall(selection: Selection) = {
+      if (targetScope.requiredParameters.isEmpty) {
+        Right((mkValDef(name, selection.selectedTopLevelTrees.head), Ident(name)))
+      } else {
+        Left(RefactoringError(s"Can't extract expression with inbound dependencies ${targetScope.requiredParameters}"))
+      }
+    }
   }
 
   /**
@@ -61,14 +69,15 @@ trait ExtractionTargets { self: ExtractCode =>
    */
   case class NewDef(targetScope: TargetScope, name: String, selectedParameters: List[Symbol]) extends ExtractionTarget {
     def getCodeAndCall(selection: Selection) =
-      Right(defDefAndCall(selection))
+      Right(defDefWithCall(selection))
   }
 
   case class NewVal(targetScope: TargetScope, name: String) extends ExtractionTarget {
     val selectedParameters = Nil
 
     def getCodeAndCall(selection: Selection) =
-      Right((EmptyTree, EmptyTree))
+      valDefWithCall(selection)
+
   }
 
   case class NewDefOrVal(targetScope: TargetScope, name: String, selectedParameters: List[Symbol]) extends ExtractionTarget {
@@ -76,6 +85,6 @@ trait ExtractionTargets { self: ExtractCode =>
       if (parameters(selection).isEmpty)
         Right((EmptyTree, EmptyTree))
       else
-        Right(defDefAndCall(selection))
+        Right(defDefWithCall(selection))
   }
 }
