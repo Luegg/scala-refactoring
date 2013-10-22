@@ -97,59 +97,60 @@ abstract class ExtractCode extends MultiStageRefactoring with TreeAnalysis with 
   }
 
   def perform(selection: Selection, preparation: PreparationResult, userInput: RefactoringParameters): Either[RefactoringError, List[Change]] = {
-    val Right((closure, call)) = userInput.getCodeAndCall(selection)
+    userInput.getCodeAndCall(selection).right.map { (codeAndCall) =>
+      val (closure, call) = codeAndCall
+      val extractSingleStatement = selection.selectedTopLevelTrees.size == 1
 
-    val extractSingleStatement = selection.selectedTopLevelTrees.size == 1
+      val replaceExpressionWithCall =
+        replaceTree(selection.selectedTopLevelTrees.head, call)
 
-    val replaceExpressionWithCall =
-      replaceTree(selection.selectedTopLevelTrees.head, call)
+      val replaceSequenceWithCall =
+        transform {
+          case block @ Block(stats, expr) => {
+            val newStats = (stats :+ expr).replaceSequence(selection.selectedTopLevelTrees, call :: Nil)
+            mkBlock(newStats) replaces block
+          }
+        }
 
-    val replaceSequenceWithCall =
-      transform {
-        case block @ Block(stats, expr) => {
-          val newStats = (stats :+ expr).replaceSequence(selection.selectedTopLevelTrees, call :: Nil)
-          mkBlock(newStats) replaces block
+      val findEnclosingTree = predicate { (t: Tree) => t == userInput.targetScope.tree }
+
+      def insertClosureInSequence(statements: List[Tree]) = {
+        val (before, after) = statements.span { t =>
+          t.pos.isRange && t.pos.end <= selection.pos.start
+        }
+        if (before.length == 0)
+          closure :: after
+        else
+          before ::: PlainText.BlankLine :: closure :: after
+      }
+
+      val insertClosureDef = transform {
+        case t @ Block(stats, expr) =>
+          t copy (stats = insertClosureInSequence(stats)) replaces t
+        case t @ Template(_, _, body) =>
+          t copy (body = insertClosureInSequence(body)) replaces t
+        case t @ DefDef(_, _, _, _, _, NoBlock(rhs)) =>
+          t copy (rhs = Block(closure :: Nil, rhs)) replaces t
+      }
+
+      val extractClosure = topdown {
+        matchingChildren {
+          findEnclosingTree &>
+            {
+              // first try to replace direct children
+              (if (extractSingleStatement) replaceExpressionWithCall else replaceSequenceWithCall) |>
+                // otherwise replace in subtrees
+                topdown {
+                  matchingChildren {
+                    (replaceExpressionWithCall)
+                  }
+                }
+            } &>
+            insertClosureDef
         }
       }
 
-    val findEnclosingTree = predicate { (t: Tree) => t == userInput.targetScope.tree }
-
-    def insertClosureInSequence(statements: List[Tree]) = {
-      val (before, after) = statements.span { t =>
-        t.pos.isRange && t.pos.end <= selection.pos.start
-      }
-      if (before.length == 0)
-        closure :: after
-      else
-        before ::: PlainText.BlankLine :: closure :: after
+      transformFile(selection.file, extractClosure)
     }
-
-    val insertClosureDef = transform {
-      case t @ Block(stats, expr) =>
-        t copy (stats = insertClosureInSequence(stats)) replaces t
-      case t @ Template(_, _, body) =>
-        t copy (body = insertClosureInSequence(body)) replaces t
-      case t @ DefDef(_, _, _, _, _, NoBlock(rhs)) =>
-        t copy (rhs = Block(closure :: Nil, rhs)) replaces t
-    }
-
-    val extractClosure = topdown {
-      matchingChildren {
-        findEnclosingTree &>
-          {
-            // first try to replace direct children
-            (if (extractSingleStatement) replaceExpressionWithCall else replaceSequenceWithCall) |>
-              // otherwise replace in subtrees
-              topdown {
-                matchingChildren {
-                  (replaceExpressionWithCall)
-                }
-              }
-          } &>
-          insertClosureDef
-      }
-    }
-
-    Right(transformFile(selection.file, extractClosure))
   }
 }
