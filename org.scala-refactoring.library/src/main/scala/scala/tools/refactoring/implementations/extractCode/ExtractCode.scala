@@ -65,16 +65,16 @@ abstract class ExtractCode extends MultiStageRefactoring with TreeAnalysis with 
     closureName: String,
     /** returns for each optional parameter if it should be used as a closure parameter */
     closureParameters: Symbol => Boolean)
-    
+
   private def findTargetScopes(selection: Selection) = {
-      val scopes = selection.filterSelectedWithPredicate {
-        case b: Block if b == selection.selectedTopLevelTrees.head => false
-        case DefDef(_, _, _, _, _, _: Block) => false // if def has block body, only use body as target scope
-        case _: DefDef | _: Block | _: Template => true
-        case _ => false
-      }
-      
-      scopes.map(TargetScope(_, selection))
+    val scopes = selection.filterSelectedWithPredicate {
+      case b: Block if b == selection.selectedTopLevelTrees.head => false
+      case DefDef(_, _, _, _, _, _: Block) => false // if def has block body, only use body as target scope
+      case _: DefDef | _: Block | _: Template => true
+      case _ => false
+    }
+
+    scopes.map(TargetScope(_, selection))
   }
 
   def prepare(selection: Selection): Either[PreparationError, PreparationResult] = {
@@ -94,10 +94,10 @@ abstract class ExtractCode extends MultiStageRefactoring with TreeAnalysis with 
     else if (selection.selectedTopLevelTrees.size == 0)
       Left(PreparationError("No expression or statement selected."))
     else
-      findTargetScopes(selection) match{
-      case Nil => Left(PreparationError("Can't extract closure from this position."))
-      case scopes => Right(PreparationResult(scopes))
-    }
+      findTargetScopes(selection) match {
+        case Nil => Left(PreparationError("Can't extract closure from this position."))
+        case scopes => Right(PreparationResult(scopes))
+      }
   }
 
   def perform(selection: Selection, preparation: PreparationResult, userInput: RefactoringParameters): Either[RefactoringError, List[Change]] = {

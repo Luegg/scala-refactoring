@@ -212,6 +212,7 @@ class ExtractCodePreparationTest extends util.TestPreparation {
     .done
 
   @Test
+  @Ignore
   def prepareWithClassAsInboundDependency = Prepare(
     """
     object Demo {
