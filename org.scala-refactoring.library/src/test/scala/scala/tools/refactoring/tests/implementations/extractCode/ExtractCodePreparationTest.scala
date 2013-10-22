@@ -1,13 +1,13 @@
 package scala.tools.refactoring
-package tests.implementations
+package tests.implementations.extractCode
 
 import tests.util
-import implementations.ExtractClosure
+import scala.tools.refactoring.implementations.extractCode.ExtractCode
 import org.junit.Assert._
 
-class ExtractClosurePreparationTest extends util.TestPreparation {
+class ExtractCodePreparationTest extends util.TestPreparation {
   case class Prepare(fs: FileSet) extends Preparation(fs) {
-    val refactoring = new ExtractClosure with SilentTracing with TestProjectIndex
+    val refactoring = new ExtractCode with SilentTracing with TestProjectIndex
 
     val PreparationResult = refactoring.PreparationResult
 

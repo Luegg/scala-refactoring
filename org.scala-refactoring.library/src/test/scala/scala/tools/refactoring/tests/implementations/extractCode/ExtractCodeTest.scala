@@ -1,17 +1,15 @@
 package scala.tools.refactoring
-package tests.implementations
+package tests.implementations.extractCode
 
 import tests.util
-import implementations.ExtractClosure
+import scala.tools.refactoring.implementations.extractCode.ExtractCode
 import org.junit.Assert._
-import org.junit.Assert.{ fail => failTest }
-import org.junit.Test
 
-class ExtractClosureTest extends util.TestRefactoring {
+class ExtractCodeTest extends util.TestRefactoring {
   import global._
 
   def extract(closureName: String, closureParams: List[String])(files: FileSet) = new TestRefactoringImpl(files) {
-    val refactoring = new ExtractClosure with SilentTracing with TestProjectIndex
+    val refactoring = new ExtractCode with SilentTracing with TestProjectIndex
     val filter = (sym: refactoring.global.Symbol) => closureParams.contains(sym.nameString)
     val changes = performRefactoring(refactoring.RefactoringParameters(closureName, filter))
   }.changes

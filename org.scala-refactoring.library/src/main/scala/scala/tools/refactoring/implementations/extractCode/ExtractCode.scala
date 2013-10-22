@@ -1,13 +1,14 @@
 package scala.tools.refactoring
-package implementations
+package implementations.extractCode
 
 import common.Change
 import common.CompilerAccess
 import scala.tools.refactoring.analysis.TreeAnalysis
 import scala.tools.refactoring.analysis.Indexes
 import scala.reflect.internal.Flags
+import scala.tools.refactoring.MultiStageRefactoring
 
-abstract class ExtractClosure extends MultiStageRefactoring with TreeAnalysis with Indexes with CompilerAccess {
+abstract class ExtractCode extends MultiStageRefactoring with TreeAnalysis with Indexes with CompilerAccess {
   import global._
 
   case class PreparationResult(
