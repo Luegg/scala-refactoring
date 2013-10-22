@@ -69,6 +69,7 @@ abstract class ExtractCode extends MultiStageRefactoring with TreeAnalysis with 
   private def findTargetScopes(selection: Selection) = {
       val scopes = selection.filterSelectedWithPredicate {
         case b: Block if b == selection.selectedTopLevelTrees.head => false
+        case DefDef(_, _, _, _, _, _: Block) => false // if def has block body, only use body as target scope
         case _: DefDef | _: Block | _: Template => true
         case _ => false
       }

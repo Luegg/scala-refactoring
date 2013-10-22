@@ -119,14 +119,15 @@ class ExtractCodePreparationTest extends util.TestPreparation {
     package extractClosure
     object Demo {
       def a = {
-        ((i: Int) => /*(*/println(i)/*)*/)(1)
+        val n = 7
+        ((i: Int) => /*(*/println(n * i)/*)*/)(1)
 	  }
     }
     """)
     .assertSuccess
     .assertScopes(
-      (Nil, List("i")),
-      (Nil, List("i")))
+      (Nil, List("n", "i")),
+      (List("n"), List("i")))
     .done
 
   @Test
@@ -221,6 +222,7 @@ class ExtractCodePreparationTest extends util.TestPreparation {
     }
     """)
     .assertSuccess
-    .assertScopes((Nil, Nil))
+    .assertScopes(
+        (Nil, Nil))
     .done
 }
