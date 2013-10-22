@@ -462,4 +462,52 @@ class ExtractClosureTest extends util.TestRefactoring {
     }
     """
   }.refactor(extract("extracted", Nil)).assertEqualCode
+  
+  @Test
+  @Ignore("Depends on https://www.assembla.com/spaces/scala-refactoring/tickets/82")
+  def extractLhsOfMultipleAssignment = new FileSet {
+    """
+    package extractClosure
+    object Demo{
+      def fn = {
+        val (a, b) = /*(*/(1, 2)/*)*/
+      }
+    }
+    """ becomes
+      """
+    package extractClosure
+    object Demo{
+      def fn = {
+        def extracted: (Int, Int) = {
+          /*(*/(1, 2)/*)*/
+        }
+        val (a, b) = extracted
+      }
+    }
+    """
+  }.refactor(extract("extracted", Nil)).assertEqualCode
+  
+  @Test
+  @Ignore("Depends on https://www.assembla.com/spaces/scala-refactoring/tickets/82")
+  def extractExpressionInParens = new FileSet {
+    """
+    package extractClosure
+    object Demo{
+      def fn = {
+        (/*(*/List(1, 2, 3)/*)*/).foreach(println(_))
+      }
+    }
+    """ becomes
+      """
+    package extractClosure
+    object Demo{
+      def fn = {
+        def extracted: List[Int] = {
+          /*(*/List(1, 2, 3)/*)*/
+        }
+        extracted.foreach(println(_))
+      }
+    }
+    """
+  }.refactor(extract("extracted", Nil)).assertEqualCode
 }
