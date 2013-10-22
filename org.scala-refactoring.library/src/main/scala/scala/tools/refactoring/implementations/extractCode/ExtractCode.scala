@@ -8,7 +8,7 @@ import scala.tools.refactoring.analysis.Indexes
 import scala.reflect.internal.Flags
 import scala.tools.refactoring.MultiStageRefactoring
 
-abstract class ExtractCode extends MultiStageRefactoring with TreeAnalysis with Indexes with CompilerAccess {
+abstract class ExtractCode extends MultiStageRefactoring with TreeAnalysis with Indexes with CompilerAccess with ExtractionTargets {
   import global._
 
   /**
@@ -60,13 +60,7 @@ abstract class ExtractCode extends MultiStageRefactoring with TreeAnalysis with 
   case class PreparationResult(
     targetScopes: List[TargetScope])
 
-  case class RefactoringParameters(
-    /** the target scope of the refactoring */
-    targetScope: TargetScope,
-    /** name of the closure function */
-    closureName: String,
-    /** returns for each optional parameter if it should be used as a closure parameter */
-    closureParameters: Symbol => Boolean)
+  type RefactoringParameters = ExtractionTarget
 
   private def findTargetScopes(selection: Selection) = {
     val scopes = selection.filterSelectedWithPredicate {
@@ -103,34 +97,7 @@ abstract class ExtractCode extends MultiStageRefactoring with TreeAnalysis with 
   }
 
   def perform(selection: Selection, preparation: PreparationResult, userInput: RefactoringParameters): Either[RefactoringError, List[Change]] = {
-    val selectedOptionalParams = userInput.targetScope.optionalParameters.filter(userInput.closureParameters(_))
-    val params = inboundDependencies(selection)
-      .filter { dep =>
-        userInput.targetScope.requiredParameters.contains(dep) ||
-          selectedOptionalParams.contains(dep)
-      }
-    val returns = outboundLocalDependencies(selection).distinct
-
-    val closure = {
-      val returnStatement = if (returns.isEmpty) Nil else mkReturn(returns) :: Nil
-      val closureBody = selection.selectedTopLevelTrees match {
-        // a single block tree could be unpacked
-        case Block(stats, expr) :: Nil => stats ::: expr :: returnStatement
-        case stats => stats ::: returnStatement
-      }
-      val mods = userInput.targetScope.tree match {
-        case _: Template => NoMods withPosition (Flags.PRIVATE, NoPosition)
-        case _ => NoMods
-      }
-
-      mkDefDef(
-        mods,
-        userInput.closureName,
-        if (params.isEmpty) Nil else params :: Nil,
-        closureBody)
-    }
-
-    val call = mkCallDefDef(userInput.closureName, params :: Nil, returns)
+    val Right((closure, call)) = userInput.getCodeAndCall(selection)
 
     val extractSingleStatement = selection.selectedTopLevelTrees.size == 1
 

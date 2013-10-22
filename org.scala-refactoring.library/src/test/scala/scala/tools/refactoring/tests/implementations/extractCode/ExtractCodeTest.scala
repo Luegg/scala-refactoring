@@ -13,12 +13,15 @@ class ExtractCodeTest extends util.TestRefactoring {
    */
   def extract(closureName: String, closureParams: List[String])(files: FileSet) = new TestRefactoringImpl(files) {
     val refactoring = new ExtractCode with SilentTracing with TestProjectIndex
-    val filter = (sym: refactoring.global.Symbol) => closureParams.contains(sym.nameString)
+    val targetScope = preparationResult.right.get.targetScopes.last
+    val selectedParams = targetScope.optionalParameters.filter(p => {
+      closureParams.contains(p.nameString)
+    })
     val refactoringParameters =
-      refactoring.RefactoringParameters(
-          preparationResult.right.get.targetScopes.last,
+      refactoring.NewDef(
+          targetScope,
           closureName,
-          filter)
+          selectedParams)
     val changes = performRefactoring(refactoringParameters)
   }.changes
 
