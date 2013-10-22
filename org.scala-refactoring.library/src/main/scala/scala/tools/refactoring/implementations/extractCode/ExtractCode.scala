@@ -61,6 +61,8 @@ abstract class ExtractCode extends MultiStageRefactoring with TreeAnalysis with 
     targetScopes: List[TargetScope])
 
   case class RefactoringParameters(
+    /** the target scope of the refactoring */
+    targetScope: TargetScope,
     /** name of the closure function */
     closureName: String,
     /** returns for each optional parameter if it should be used as a closure parameter */
@@ -101,10 +103,10 @@ abstract class ExtractCode extends MultiStageRefactoring with TreeAnalysis with 
   }
 
   def perform(selection: Selection, preparation: PreparationResult, userInput: RefactoringParameters): Either[RefactoringError, List[Change]] = {
-    val selectedOptionalParams = preparation.targetScopes.last.optionalParameters.filter(userInput.closureParameters(_))
+    val selectedOptionalParams = userInput.targetScope.optionalParameters.filter(userInput.closureParameters(_))
     val params = inboundDependencies(selection)
       .filter { dep =>
-        preparation.targetScopes.last.requiredParameters.contains(dep) ||
+        userInput.targetScope.requiredParameters.contains(dep) ||
           selectedOptionalParams.contains(dep)
       }
     val returns = outboundLocalDependencies(selection).distinct
@@ -116,7 +118,7 @@ abstract class ExtractCode extends MultiStageRefactoring with TreeAnalysis with 
         case Block(stats, expr) :: Nil => stats ::: expr :: returnStatement
         case stats => stats ::: returnStatement
       }
-      val mods = preparation.targetScopes.last.tree match {
+      val mods = userInput.targetScope.tree match {
         case _: Template => NoMods withPosition (Flags.PRIVATE, NoPosition)
         case _ => NoMods
       }
@@ -143,7 +145,7 @@ abstract class ExtractCode extends MultiStageRefactoring with TreeAnalysis with 
         }
       }
 
-    val findEnclosingTree = predicate { (t: Tree) => t == preparation.targetScopes.last.tree }
+    val findEnclosingTree = predicate { (t: Tree) => t == userInput.targetScope.tree }
 
     def insertClosureInSequence(statements: List[Tree]) = {
       val (before, after) = statements.span { t =>
