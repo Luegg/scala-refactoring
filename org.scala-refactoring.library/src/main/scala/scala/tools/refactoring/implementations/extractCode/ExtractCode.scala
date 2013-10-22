@@ -11,6 +11,19 @@ import scala.tools.refactoring.MultiStageRefactoring
 abstract class ExtractCode extends MultiStageRefactoring with TreeAnalysis with Indexes with CompilerAccess {
   import global._
 
+  /**
+   * Represents a target scope for the extracted code and all optional
+   * and required parameters if the extracted expression would be inserted
+   * in this scope.
+   */
+  case class TargetScope(
+    /** tree representing the scope */
+    tree: Tree,
+    /** optional parameters for a new method in this scope */
+    optionalParameters: List[Symbol],
+    /** required parameters for a new method in this scope*/
+    requiredParameters: List[Symbol])
+
   case class PreparationResult(
     /** tree to insert the new closure definition */
     enclosingTree: Tree,
