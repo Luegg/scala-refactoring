@@ -11,17 +11,28 @@ class ExtractCodePreparationTest extends util.TestPreparation {
 
     import refactoring._
 
-    def assertScopes(scopes: (List[String], List[String])*) = {
-      val (optional, required) = scopes.head
-      val TargetScope(_, opt, req) = preparationResult.right.get.targetScopes.last
-      assertEquals(s"expected optional parameters $optional but was $opt", optional.length, opt.length)
-      assertEquals(s"expected optional parameters $required but was $req", required.length, req.length)
-      for (expected <- optional ::: required) {
-        assertTrue((opt ::: req).exists { sym =>
-          sym.nameString == expected
-        })
+    def assertScopes(expectedScopes: (List[String], List[String])*) = {
+      val actualScopes = preparationResult.right.get.targetScopes
+      assertEquals(s"expected scopes $expectedScopes but was $actualScopes",
+          expectedScopes.length, actualScopes.length)
+      for(scope <- expectedScopes.zip(actualScopes)){
+        assertEqualScope(scope._1, scope._2)
       }
       this
+    }
+
+    private def assertEqualScope(expected: (List[String], List[String]), actual: TargetScope) = {
+      val (optExpected, reqExpected) = expected
+      val TargetScope(_, optActual, reqActuel) = actual
+      assertEquals(s"expected optional parameters $optExpected but was $optActual",
+        optExpected.length, optActual.length)
+      assertEquals(s"expected optional parameters $reqExpected but was $reqActuel",
+        reqExpected.length, reqActuel.length)
+      for (expectedParam <- optExpected ::: reqExpected) {
+        assertTrue((optActual ::: reqActuel).exists { sym =>
+          sym.nameString == expectedParam
+        })
+      }
     }
   }
 
@@ -38,7 +49,8 @@ class ExtractCodePreparationTest extends util.TestPreparation {
     }
     """)
     .assertSuccess
-    .assertScopes((List("os", "osx"), Nil))
+    .assertScopes(
+      (List("os", "osx"), Nil))
     .done
 
   @Test
@@ -66,7 +78,9 @@ class ExtractCodePreparationTest extends util.TestPreparation {
     }
     """)
     .assertSuccess
-    .assertScopes((List("os", "osx"), Nil))
+    .assertScopes(
+      (List("os", "osx"), Nil),
+      (List("os", "osx"), Nil))
     .done
 
   @Test
@@ -82,7 +96,9 @@ class ExtractCodePreparationTest extends util.TestPreparation {
     }
     """)
     .assertSuccess
-    .assertScopes((Nil, Nil))
+    .assertScopes(
+      (Nil, Nil),
+      (Nil, Nil))
     .done
 
   @Test
@@ -108,7 +124,9 @@ class ExtractCodePreparationTest extends util.TestPreparation {
     }
     """)
     .assertSuccess
-    .assertScopes((Nil, List("i")))
+    .assertScopes(
+      (Nil, List("i")),
+      (Nil, List("i")))
     .done
 
   @Test
@@ -123,7 +141,9 @@ class ExtractCodePreparationTest extends util.TestPreparation {
     }
     """)
     .assertSuccess
-    .assertScopes((Nil, Nil))
+    .assertScopes(
+      (Nil, Nil),
+      (Nil, Nil))
     .done
 
   @Test
@@ -137,7 +157,9 @@ class ExtractCodePreparationTest extends util.TestPreparation {
     }
     """)
     .assertSuccess
-    .assertScopes((Nil, Nil))
+    .assertScopes(
+      (Nil, Nil),
+      (Nil, Nil))
     .done
 
   @Test
