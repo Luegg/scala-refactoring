@@ -18,7 +18,7 @@ class ExtractCodeTest extends util.TestRefactoring {
       closureParams.contains(p.nameString)
     })
     val refactoringParameters =
-      refactoring.NewDef(
+      refactoring.RefactoringParameters(
           targetScope,
           closureName,
           selectedParams)

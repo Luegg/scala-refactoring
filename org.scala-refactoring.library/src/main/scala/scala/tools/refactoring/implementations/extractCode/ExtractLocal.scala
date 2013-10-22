@@ -2,15 +2,16 @@ package scala.tools.refactoring
 package implementations.extractCode
 
 import common.Change
-import scala.tools.refactoring.common.CompilerAccess
-import scala.tools.refactoring.analysis.Indexes
+import common.CompilerAccess
+import analysis.Indexes
 
-abstract class ExtractLocal extends ExtractCode{
+abstract class ExtractLocal extends ExtractCodeBase {
   import global._
-  
-  type RefactoringParameter = String
-  
-  def perform(selection: Selection, preparation: PreparationResult, name: RefactoringParameter): Either[RefactoringError, List[Change]] = {
-    super.perform(selection, preparation, NewVal(preparation.targetScopes.last, name))
+
+  case class RefactoringParameters(
+    name: String)
+
+  def perform(selection: Selection, preparation: PreparationResult, params: RefactoringParameters): Either[RefactoringError, List[Change]] = {
+    extract(selection, NewVal(preparation.targetScopes.last, params.name))
   }
 }

@@ -3,7 +3,7 @@ package scala.tools.refactoring.implementations.extractCode
 import scala.tools.refactoring.common.CompilerAccess
 import scala.reflect.internal.Flags
 
-trait ExtractionTargets { self: ExtractCode =>
+trait ExtractionTargets { self: ExtractCodeBase =>
   import global._
 
   /**
@@ -93,7 +93,7 @@ trait ExtractionTargets { self: ExtractCode =>
    * Replace the extracted code with either a method or a value, depending on the number
    * of required and selected parameters.
    */
-  case class NewDefOrVal(targetScope: TargetScope, name: String, selectedParameters: List[Symbol]) extends ExtractionTarget {
+  case class NewValOrDef(targetScope: TargetScope, name: String, selectedParameters: List[Symbol]) extends ExtractionTarget {
     def getCodeAndCall(selection: Selection) =
       if (parameters(selection).isEmpty)
         Right((EmptyTree, EmptyTree))
