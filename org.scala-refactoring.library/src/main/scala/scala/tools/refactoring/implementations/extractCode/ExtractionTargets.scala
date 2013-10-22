@@ -7,15 +7,21 @@ trait ExtractionTargets { self: ExtractCode =>
   import global._
 
   /**
-   * Represents an abstraction of the code to extract.
+   * Represents an abstraction of how the extracted code should be replaced.
    */
   trait ExtractionTarget {
+    /** Where to insert the new val or def */
     val targetScope: TargetScope
 
+    /** Name of the new val or def */
     val name: String
 
+    /** List of optional parameters that should become parameters to the abstraction */
     val selectedParameters: List[Symbol]
 
+    /** Returns the code of the new abstraction (e.g. a DefDef) with the appropriate call
+     *  that replaces the extracted code.
+     */
     def getCodeAndCall(selection: Selection): Either[RefactoringError, (Tree, Tree)]
 
     protected def parameters(selection: Selection) =
@@ -65,13 +71,16 @@ trait ExtractionTargets { self: ExtractCode =>
   }
 
   /**
-   *
+   * Replace the extracted code with the definition of a new method and the appropriate call to it.
    */
   case class NewDef(targetScope: TargetScope, name: String, selectedParameters: List[Symbol]) extends ExtractionTarget {
     def getCodeAndCall(selection: Selection) =
       Right(defDefWithCall(selection))
   }
 
+  /**
+   * Replace the extracted code with the definition of a new value and the appropriate call to it.
+   */
   case class NewVal(targetScope: TargetScope, name: String) extends ExtractionTarget {
     val selectedParameters = Nil
 
@@ -80,6 +89,10 @@ trait ExtractionTargets { self: ExtractCode =>
 
   }
 
+  /**
+   * Replace the extracted code with either a method or a value, depending on the number
+   * of required and selected parameters.
+   */
   case class NewDefOrVal(targetScope: TargetScope, name: String, selectedParameters: List[Symbol]) extends ExtractionTarget {
     def getCodeAndCall(selection: Selection) =
       if (parameters(selection).isEmpty)
