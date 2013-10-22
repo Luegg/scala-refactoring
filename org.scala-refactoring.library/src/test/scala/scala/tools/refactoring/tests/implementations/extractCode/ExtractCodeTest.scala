@@ -41,7 +41,6 @@ class ExtractCodeTest extends util.TestRefactoring {
     object Demo{
       def printInfo = {
         println("nonsense")
-
         def greet: Unit = {
           /*(*/println("hi")/*)*/
         }
@@ -68,7 +67,6 @@ class ExtractCodeTest extends util.TestRefactoring {
     object Demo{
       def printInfo = {
         println("nonsense")
-
         def greet: Unit = {
           /*(*/println("hello")
           println("world")/*)*/
@@ -180,7 +178,6 @@ class ExtractCodeTest extends util.TestRefactoring {
     object Demo {
       def calc = {
         val (a, b, c) = (1, 2, 3)
-
         def printRes(a: Int, b: Int): Unit = {
           /*(*/println(a + b + c)/*)*/
         }

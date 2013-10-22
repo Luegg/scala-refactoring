@@ -121,7 +121,7 @@ abstract class ExtractCode extends MultiStageRefactoring with TreeAnalysis with 
         if (before.length == 0)
           closure :: after
         else
-          before ::: PlainText.BlankLine :: closure :: after
+          before ::: closure :: after
       }
 
       val insertClosureDef = transform {
